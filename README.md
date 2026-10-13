@@ -6,15 +6,15 @@
 A concert-style "Pepper's Ghost" hologram in the browser. Open the link, tap **Tap to appear** once (browsers need one tap to allow the camera), and you appear as clean, live video of yourself on pure black, full screen. No menus, settings or codes.
 
 ## What it does
-- **Real camera video, not a point cloud.** Front camera, 1280×720 at 30 fps (ideal constraints).
+- **Real camera video, not a point cloud.** Front camera at the highest resolution offered (ideal 1920×1080, falling back to 1280×720), 30 fps. Rendered by WebGL directly onto a canvas at full devicePixelRatio. The mask is used only as alpha over the original camera frame (colour is never blurred or blended).
 - **Person matting:** MediaPipe Image Segmenter, **selfie multiclass 256×256** model (background channel inverted = person), GPU delegate with CPU fallback. Slow devices (>40 ms per frame) switch automatically to the lighter **selfie segmenter** model.
 - **Clean edges:** adaptive temporal smoothing (damps flicker, follows real motion), joint-bilateral refinement that snaps the low-res mask to colour edges of the full-res frame, smoothstep tightening + feathering (no halo). The colour frame and its mask are kept in sync.
-- **Stage look (WebGL2 shader):** gentle lift/contrast/saturation, warm skin enhancement, subtle rim light, optional blue-white hologram tint (on by default, subtle), optional scanline shimmer (off by default).
-- **UI disappears.** The wordmark fades out after about 3.5 s; tapping the screen shows a small overlay for 3 s: **Stage mode** (4-way Pepper's Ghost pyramid layout on black), **Mirror**, **Holo tint**, **Scanlines**, **Share (beta)**.
+- **Clear by default:** light unsharp mask, +4% contrast and +5% saturation, no brightness lift (true blacks), and a 1–2 px feather on the outline only. **Glow** (toggle) adds a subtle blue-white tint and rim light. Scanline shimmer is optional and off by default.
+- **UI disappears.** The wordmark fades out after about 3.5 s; tapping the screen shows a small overlay for 3 s: **Stage mode** (4-way Pepper's Ghost pyramid layout on black), **Mirror**, **Clear/Glow**, **Scanlines**, **Rescan** (restarts the camera and segmentation and resets smoothing), **Share (beta)**. A one-time tip after start: "Face a light, plain wall behind you."
 - **Share (beta):** creates a link `…/?watch=<id>` (native share sheet or clipboard). The other person just opens it. The *already-matted* hologram (background removed) is streamed peer-to-peer over WebRTC; signaling uses the free public PeerJS broker (0.peerjs.com) and public STUN. No TURN relay, so some strict/cellular networks will not connect, which is why it is labelled beta. Video only, no audio. The host must keep the page open.
 - **Old 3D point cloud** lives at [`/lab/`](https://bridgett50.github.io/loving-grace-holo-demo/lab/) (also `?mode=3d`). It is not the default.
 
-URL options (for testing): `?stage` (start in stage mode), `?model=selfie|multiclass`, `?delegate=cpu`, `?debug` (PeerJS logs).
+URL options (for testing): `?stage` (start in stage mode), `?glow`, `?model=selfie|multiclass`, `?delegate=cpu`, `?debug` (PeerJS logs).
 
 ## Run locally
 ```

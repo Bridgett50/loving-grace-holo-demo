@@ -11,9 +11,9 @@ console.error = (...a) => (typeof a[0] === 'string' && /^(INFO|WARNING|W\d{4}|I\
 
 const $ = id => document.getElementById(id);
 const q = new URLSearchParams(location.search);
-const view = $('view'), vctx = view.getContext('2d');
+const view = $('view');
 const vid = $('vid'), ui = $('ui'), msg = $('msg'), tapBtn = $('tap'), brand = $('brand');
-const S = { stage: q.has('stage'), mirror: true, tint: true, scan: false, model: q.get('model') || 'multiclass',
+const S = { stage: q.has('stage'), mirror: true, glow: q.has('glow'), scan: false, model: q.get('model') || 'multiclass',
             segMs: 0, fps: 0, frames: 0, delegate: '', ready: false, viewer: q.has('watch') };
 window.__holo = S;
 S.maskStats = () => { if (!smooth) return null; let mn = 1, mx = 0, sum = 0; for (const v of smooth) { mn = Math.min(mn, v); mx = Math.max(mx, v); sum += v; } return { w: mw, h: mh, mn, mx, mean: sum / smooth.length }; };
@@ -29,9 +29,12 @@ ui.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return; showUI();
   const a = b.dataset.act;
   if (a === 'share') return share();
+  if (a === 'rescan') return rescan();
+  if (a === 'glow') { S.glow = !S.glow; b.textContent = S.glow ? 'Glow' : 'Clear'; b.classList.toggle('on', S.glow); return; }
   S[a] = !S[a]; b.classList.toggle('on', S[a]);
 });
-function syncButtons() { for (const b of ui.querySelectorAll('button[data-act]')) if (b.dataset.act in S && b.dataset.act !== 'share') b.classList.toggle('on', !!S[b.dataset.act]); }
+function syncButtons() { for (const b of ui.querySelectorAll('button[data-act]')) if (b.dataset.act in S && b.dataset.act !== 'share') { if (b.dataset.act === 'glow') b.textContent = S.glow ? 'Glow' : 'Clear'; }
+  for (const b of ui.querySelectorAll('button[data-act]')) if (b.dataset.act in S && b.dataset.act !== 'share') b.classList.toggle('on', !!S[b.dataset.act]); }
 
 function goFull() {
   const d = document.documentElement;
@@ -39,79 +42,77 @@ function goFull() {
   navigator.wakeLock?.request('screen').catch(() => {});
 }
 
-// ---------- view canvas sizing & layout ----------
-function resize() { const r = Math.min(devicePixelRatio || 1, 2); view.width = Math.round(innerWidth * r); view.height = Math.round(innerHeight * r); }
+// ---------- full-DPR canvas ----------
+let vctx = null, gl = null;           // host: WebGL2 straight onto the visible canvas; viewer: 2D
+function resize() { const r = devicePixelRatio || 1; view.width = Math.round(innerWidth * r); view.height = Math.round(innerHeight * r); }
 addEventListener('resize', resize); resize();
 
-function present(src, sw, sh, mirror) {
-  const W = view.width, H = view.height;
-  vctx.setTransform(1, 0, 0, 1, 0, 0); vctx.fillStyle = '#000'; vctx.fillRect(0, 0, W, H);
+// Layout: list of quads {cx,cy (px, y down), hx,hy (half size px; hx<0 = mirror), rot, uv:[u0,v0,us,vs]}
+function layout(sw, sh, mirror) {
+  const W = view.width, H = view.height, m = mirror ? -1 : 1;
+  if (!S.stage) { const k = Math.min(W / sw, H / sh); return [{ cx: W / 2, cy: H / 2, hx: m * sw * k / 2, hy: sh * k / 2, rot: 0, uv: [0, 0, 1, 1] }]; }
+  // 4-way Pepper's Ghost on a 3x3 grid (centre empty): feet toward centre, head outward
+  const s = Math.min(W, H), cell = s / 3, d = cell * 0.97, sq = Math.min(sw, sh);
+  const uv = [(sw - sq) / 2 / sw, (sh - sq) / 2 / sh, sq / sw, sq / sh], out = [];
+  for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2, ly = -(cell / 2 + d / 2);
+    out.push({ cx: W / 2 - Math.sin(a) * ly, cy: H / 2 + Math.cos(a) * ly, hx: m * d / 2, hy: d / 2, rot: a, uv }); }
+  return out;
+}
+function present2D(src, sw, sh, mirror) {   // viewer only
+  const W = view.width, H = view.height; vctx.setTransform(1, 0, 0, 1, 0, 0); vctx.fillStyle = '#000'; vctx.fillRect(0, 0, W, H);
   if (!sw || !sh) return;
-  if (!S.stage) {
-    const k = Math.min(W / sw, H / sh), w = sw * k, h = sh * k;
-    vctx.save(); vctx.translate(W / 2, H / 2); if (mirror) vctx.scale(-1, 1);
-    vctx.drawImage(src, -w / 2, -h / 2, w, h); vctx.restore(); return;
-  }
-  // 4-way Pepper's Ghost pyramid on a 3x3 grid (centre empty): feet toward the centre, head outward.
-  const s = Math.min(W, H), cell = s / 3, d = cell * 0.97;
-  const sq = Math.min(sw, sh), sx = (sw - sq) / 2, sy = (sh - sq) / 2;
-  for (let i = 0; i < 4; i++) {
-    vctx.save(); vctx.translate(W / 2, H / 2); vctx.rotate(i * Math.PI / 2);
-    if (mirror) vctx.scale(-1, 1);
-    vctx.drawImage(src, sx, sy, sq, sq, -d / 2, -cell / 2 - d, d, d);
-    vctx.restore();
-  }
+  for (const q of layout(sw, sh, mirror)) { vctx.save(); vctx.translate(q.cx, q.cy); vctx.rotate(q.rot); vctx.scale(Math.sign(q.hx), 1);
+    const [u0, v0, us, vs] = q.uv; vctx.drawImage(src, u0 * sw, v0 * sh, us * sw, vs * sh, -Math.abs(q.hx), -q.hy, 2 * Math.abs(q.hx), 2 * q.hy); vctx.restore(); }
 }
 
-// ---------- WebGL2 compositor ----------
-const gcan = document.createElement('canvas');
-const gl = gcan.getContext('webgl2', { premultipliedAlpha: false, antialias: false });
+// ---------- WebGL2 compositor: mask is ONLY alpha over the original sharp camera frame ----------
 const VS = `#version 300 es
-in vec2 p; out vec2 uv; void main(){ uv = vec2(p.x*.5+.5, .5-p.y*.5); gl_Position = vec4(p,0,1); }`;
+in vec2 p; out vec2 uv;
+uniform vec2 uC, uHalf, uScr; uniform float uRot; uniform vec4 uUV;
+void main(){
+  uv = uUV.xy + (p*.5+.5) * uUV.zw;
+  vec2 q = p * uHalf; float c = cos(uRot), s = sin(uRot);
+  vec2 px = uC + vec2(c*q.x - s*q.y, s*q.x + c*q.y);
+  gl_Position = vec4(px.x / uScr.x * 2. - 1., 1. - px.y / uScr.y * 2., 0, 1);
+}`;
 const FS = `#version 300 es
 precision highp float;
 in vec2 uv; out vec4 o;
-uniform sampler2D uVid, uMask; uniform vec2 uMT; uniform float uTint, uScan, uTime, uH;
+uniform sampler2D uVid, uMask; uniform vec2 uMT, uVT; uniform float uGlow, uScan, uTime, uH;
 vec3 vid(vec2 t){ return texture(uVid,t).rgb; }
 void main(){
   vec3 c = vid(uv);
-  // joint-bilateral refinement: snap the low-res mask to real colour edges of the full-res frame
-  float a = 0., ws = 0., mb = 0.;
+  // mask refinement (mask only; colour is never blurred): joint-bilateral snap to real edges
+  float m = 0., ws = 0.;
   for (int j=-1;j<=1;j++) for (int i=-1;i<=1;i++){
-    vec2 t = uv + vec2(float(i),float(j))*uMT*1.25;
-    float m = texture(uMask,t).r; vec3 d = c - vid(t);
-    float w = exp(-dot(d,d)*30.) * (i==0&&j==0 ? 1.5 : 1.);
-    a += m*w; ws += w; mb += m;
+    vec2 t = uv + vec2(float(i),float(j))*uMT;
+    vec3 d = c - vid(t); float w = exp(-dot(d,d)*40.) * (i==0&&j==0 ? 2. : 1.);
+    m += texture(uMask,t).r*w; ws += w;
   }
-  a /= ws; mb /= 9.;
-  a = smoothstep(.34, .80, a);                // tighten -> no halo, soft feathered edge
-  // wide mask for rim light / outer glow
-  float wide = 0.;
-  for (int k=0;k<8;k++){ float ang = float(k)*.785398; wide += texture(uMask, uv + vec2(cos(ang),sin(ang))*uMT*4.).r; }
-  wide /= 8.;
-  // stage grade: gentle lift, contrast, saturation, warm skin
-  c = pow(c, vec3(.93));
-  c = (c-.5)*1.08+.5+.02;
-  float l = dot(c, vec3(.299,.587,.114));
-  c = mix(vec3(l), c, 1.08);
-  float cr = .5 + .5*c.r - .419*c.g - .081*c.b, cb = .5 - .169*c.r - .331*c.g + .5*c.b;
-  float skin = smoothstep(.06,.0,abs(cr-.6)-.05) * smoothstep(.06,.0,abs(cb-.43)-.06);
-  c += skin*vec3(.025,.012,0.);
-  // hologram tint (subtle blue-white)
-  c = mix(c, c*vec3(.90,.98,1.10)+vec3(0.,.01,.03), .55*uTint);
-  float rim = a * smoothstep(.95,.45,wide);    // inside, near silhouette
-  float glow = (1.-a) * smoothstep(.15,.6,wide) * .07;
-  vec3 rc = mix(vec3(1.,.97,.93), vec3(.62,.82,1.), uTint);
-  c += rc * rim * (.12 + .12*uTint);
-  if (uScan > .5) {
-    float s = .93 + .07*sin(uv.y*uH*1.4 - uTime*4.);
-    s *= .985 + .015*sin(uTime*23.);
-    c *= s;
+  m /= ws;
+  float fw = max(fwidth(m), 1e-4);
+  float a = clamp((m - .5) / (fw * 1.5) + .5, 0., 1.);   // ~1-2 screen-px feather at the edge only
+  // light unsharp mask on the original frame
+  vec3 bl = (vid(uv+vec2(uVT.x,0.)) + vid(uv-vec2(uVT.x,0.)) + vid(uv+vec2(0.,uVT.y)) + vid(uv-vec2(0.,uVT.y))) * .25;
+  c = clamp(c + .45*(c - bl), 0., 1.);
+  // neutral grade: tiny contrast + saturation, no lift (true blacks)
+  c = clamp((c - .5) * 1.04 + .5, 0., 1.);
+  float l = dot(c, vec3(.299,.587,.114)); c = clamp(mix(vec3(l), c, 1.05), 0., 1.);
+  vec3 col = c * a;
+  if (uGlow > .5) {                       // optional 'Glow' look
+    float wide = 0.;
+    for (int k=0;k<8;k++){ float an = float(k)*.785398; wide += texture(uMask, uv + vec2(cos(an),sin(an))*uMT*3.).r; }
+    wide /= 8.;
+    vec3 rc = vec3(.62,.82,1.);
+    col = mix(col, col*vec3(.92,.98,1.08), .5*a) + rc * a * smoothstep(.95,.5,wide) * .15 + rc * (1.-a) * smoothstep(.2,.6,wide) * .06;
   }
-  o = vec4(clamp(c*a + rc*glow*(.5+.5*uTint), 0., 1.), 1.);
+  if (uScan > .5) col *= (.93 + .07*sin(uv.y*uH*1.4 - uTime*4.)) * (.985 + .015*sin(uTime*23.));
+  o = vec4(col, 1.);
 }`;
 let prog, vtex, mtex, U = {};
 function initGL() {
+  if (gl) return;
+  gl = view.getContext('webgl2', { antialias: false, alpha: false, preserveDrawingBuffer: false });
   const sh = (t, s) => { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(x)); return x; };
   prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog);
   if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
@@ -122,7 +123,7 @@ function initGL() {
   const mk = unit => { const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
     for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v); return t; };
   vtex = mk(0); mtex = mk(1);
-  for (const n of ['uVid', 'uMask', 'uMT', 'uTint', 'uScan', 'uTime', 'uH']) U[n] = gl.getUniformLocation(prog, n);
+  for (const n of ['uVid', 'uMask', 'uMT', 'uVT', 'uGlow', 'uScan', 'uTime', 'uH', 'uC', 'uHalf', 'uScr', 'uRot', 'uUV']) U[n] = gl.getUniformLocation(prog, n);
   gl.uniform1i(U.uVid, 0); gl.uniform1i(U.uMask, 1);
   gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
 }
@@ -168,34 +169,52 @@ function segment(ts) {
 let lastVT = -1, fpsT = performance.now(), fpsN = 0;
 function frame(now) {
   requestAnimationFrame(frame);
-  if (vid.readyState < 2) return;
+  if (vid.readyState < 2 || !seg) return;
   const vw = vid.videoWidth, vh = vid.videoHeight;
   if (vid.currentTime !== lastVT) { lastVT = vid.currentTime; segment(now); fpsN++; }
   if (now - fpsT > 1000) { S.fps = fpsN * 1000 / (now - fpsT); fpsN = 0; fpsT = now; S.frames++;
     if (S.model === 'multiclass' && !q.get('model') && S.frames === 4 && S.segMs > 40) { console.info('slow device, switching to the lighter selfie model'); loadSeg('selfie'); } }
-  if (!smooth) return;
-  if (gcan.width !== vw || gcan.height !== vh) { gcan.width = vw; gcan.height = vh; gl.viewport(0, 0, vw, vh); }
+  if (!smooth || !m8) return;
+  gl.viewport(0, 0, view.width, view.height); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, vtex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, full);
   gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, mtex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, mw, mh, 0, gl.RED, gl.UNSIGNED_BYTE, m8);
-  gl.uniform2f(U.uMT, 1 / mw, 1 / mh); gl.uniform1f(U.uTint, S.tint ? 1 : 0); gl.uniform1f(U.uScan, S.scan ? 1 : 0);
-  gl.uniform1f(U.uTime, now / 1000); gl.uniform1f(U.uH, vh);
-  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  present(gcan, vw, vh, S.mirror);
+  gl.uniform2f(U.uMT, 1 / mw, 1 / mh); gl.uniform2f(U.uVT, 1 / vw, 1 / vh); gl.uniform1f(U.uGlow, S.glow ? 1 : 0); gl.uniform1f(U.uScan, S.scan ? 1 : 0);
+  gl.uniform1f(U.uTime, now / 1000); gl.uniform1f(U.uH, vh); gl.uniform2f(U.uScr, view.width, view.height);
+  for (const L of layout(vw, vh, S.mirror)) {
+    gl.uniform2f(U.uC, L.cx, L.cy); gl.uniform2f(U.uHalf, L.hx, L.hy); gl.uniform1f(U.uRot, L.rot); gl.uniform4f(U.uUV, ...L.uv);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
 }
 
+let stream;
+async function openCamera() {
+  const v = (w, h) => ({ audio: false, video: { facingMode: 'user', width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: 30, max: 30 } } });
+  try { return await navigator.mediaDevices.getUserMedia(v(1920, 1080)); }
+  catch (e) { if (e?.name === 'NotAllowedError') throw e; return await navigator.mediaDevices.getUserMedia(v(1280, 720)); }
+}
 async function start() {
   tapBtn.hidden = true; goFull(); say('Starting camera…');
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: false,
-      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 30 } } });
+    stream = await openCamera();
     vid.srcObject = stream; await vid.play();
+    S.cam = vid.videoWidth + 'x' + vid.videoHeight;
     say('Preparing hologram…'); initGL(); await loadSeg(S.model);
-    S.ready = true; say('', 1); fadeBrand(); syncButtons();
-    requestAnimationFrame(frame);
+    S.ready = true; fadeBrand(); syncButtons();
+    if (!S.tipped) { S.tipped = true; say('Tip: Face a light, plain wall behind you.', 6000); } else say('', 1);
+    if (!S.looping) { S.looping = true; requestAnimationFrame(frame); }
   } catch (e) {
     console.warn(e); tapBtn.hidden = false; tapBtn.textContent = 'Tap to try again';
     say(e?.name === 'NotAllowedError' ? 'Camera permission is needed to appear.' : 'Could not start: ' + (e?.message || e));
   }
+}
+async function rescan() {
+  say('Rescanning…'); S.ready = false;
+  stream?.getTracks().forEach(t => t.stop()); seg?.close(); seg = null; smooth = null; lastVT = -1; S.frames = 0; S.segMs = 0;
+  if (!q.get('model')) S.model = 'multiclass';
+  try { stream = await openCamera(); vid.srcObject = stream; await vid.play(); S.cam = vid.videoWidth + 'x' + vid.videoHeight;
+    await loadSeg(S.model); S.ready = true; say('Ready', 1500);
+    if (outStream) say('Rescanned. Viewers may need to reopen the link.', 4000);
+  } catch (e) { say('Rescan failed: ' + (e?.message || e)); }
 }
 
 // ---------- Share (beta): PeerJS public broker, the matted hologram is streamed ----------
@@ -208,7 +227,7 @@ function share() {
   peer.on('open', id => offerLink(id));
   peer.on('error', e => say('Share error: ' + e.type, 5000));
   peer.on('connection', conn => conn.on('open', () => {
-    outStream = outStream || gcan.captureStream(30);
+    outStream = outStream || view.captureStream(30);
     peer.call(conn.peer, outStream); say('A viewer joined', 3000);
   }));
 }
@@ -220,8 +239,8 @@ async function offerLink(id) {
 }
 
 function viewer(hostId) {
-  tapBtn.hidden = true; for (const b of ui.querySelectorAll('[data-act=share],[data-act=tint],[data-act=scan]')) b.remove();
-  S.mirror = false; S.ready = true; syncButtons(); fadeBrand();
+  tapBtn.hidden = true; for (const b of ui.querySelectorAll('[data-act=share],[data-act=glow],[data-act=scan],[data-act=rescan]')) b.remove();
+  vctx = view.getContext('2d'); S.mirror = false; S.ready = true; syncButtons(); fadeBrand();
   say('Connecting to hologram…');
   const rv = document.createElement('video'); rv.playsInline = true; rv.muted = true; rv.autoplay = true;
   const go = () => {
@@ -232,7 +251,7 @@ function viewer(hostId) {
     peer.on('error', e => say(e.type === 'peer-unavailable' ? 'The hologram has ended or the link expired.' : 'Share error: ' + e.type));
   };
   window.Peer ? go() : addEventListener('load', go);
-  const loop = () => { requestAnimationFrame(loop); if (rv.readyState >= 2) present(rv, rv.videoWidth, rv.videoHeight, S.mirror); };
+  const loop = () => { requestAnimationFrame(loop); if (rv.readyState >= 2) present2D(rv, rv.videoWidth, rv.videoHeight, S.mirror); };
   loop();
 }
 

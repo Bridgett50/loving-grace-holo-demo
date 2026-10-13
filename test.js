@@ -23,7 +23,7 @@ const OUT = process.env.OUT || '/workspace/holo_test';
   await p.evaluate(() => { window.__holo.stage = true; });
   await new Promise(r => setTimeout(r, 1500));
   await p.screenshot({ path: `${OUT}/shot_2_stage.png` });
-  await p.evaluate(() => { const s = window.__holo; s.stage = false; s.tint = false; });
+  await p.evaluate(() => { const s = window.__holo; s.stage = false; s.glow = false; });
   await p.mouse.click(200, 300); await new Promise(r => setTimeout(r, 800));
   await p.screenshot({ path: `${OUT}/shot_3_natural_overlay.png` });
   // desktop landscape (new page: changing isMobile reloads)
