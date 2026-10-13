@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Loving Grace Presence – Holographic Demo | Loving Grace Technologies</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/"}}</script>
+</head><body>
+<header><b>Loving Grace Technologies</b><span>Presence · live 3D holographic demo</span></header>
+<div id="stage"></div>
+<video id="vid" playsinline muted autoplay></video>
+<div id="panel">
+ <div class="row">
+  <button id="btnCam">▶ Start camera</button>
+  <button id="btnGhost">◆ Pepper's Ghost</button>
+  <span id="xrSlot"></span>
+ </div>
+ <div class="row">
+  <label><input type="checkbox" id="chkDepth" checked> AI depth</label>
+  <label><input type="checkbox" id="chkSeg" checked> Remove background</label>
+  <label>Depth <input type="range" id="rngDepth" min="0" max="2" step="0.05" value="0.8"></label>
+  <label>Point <input type="range" id="rngPt" min="1" max="8" step="0.5" value="3"></label>
+ </div>
+ <details><summary>Two-person link (peer-to-peer, copy/paste)</summary>
+  <p class="small">No server: one person clicks <i>Create offer</i> and sends the text to the other (text message, email). The other pastes it, clicks <i>Answer</i>, and sends back the answer. Works on most home networks; some strict networks need a TURN relay.</p>
+  <div class="row"><button id="btnOffer">Create offer</button><button id="btnAnswer">Answer pasted offer</button><button id="btnAccept">Accept pasted answer</button></div>
+  <textarea id="sdpOut" readonly placeholder="Your code to send appears here"></textarea>
+  <textarea id="sdpIn" placeholder="Paste the other person's code here"></textarea>
+  <label><input type="checkbox" id="chkRemote"> Show remote person as hologram</label>
+ </details>
+ <div id="status">Ready. Tap “Start camera”. Drag to rotate, pinch/scroll to zoom.</div>
+</div>
+<footer>© Loving Grace Technologies, LLC · Grenada, MS · Demo only, no video leaves your device unless you open a peer link.</footer>
+<script type="module" src="app.js"></script>
+</body></html>
