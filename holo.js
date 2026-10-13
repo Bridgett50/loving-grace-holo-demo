@@ -3,6 +3,7 @@
 const MP_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
 const MODELS = {
   multiclass: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite',
+  pets: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/deeplab_v3/float32/1/deeplab_v3.tflite', // Pascal VOC: 8 cat, 12 dog
   selfie: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite',
 };
 // MediaPipe prints routine INFO/WARNING logs through console.error; route them to info.
@@ -13,9 +14,10 @@ const $ = id => document.getElementById(id);
 const q = new URLSearchParams(location.search);
 const view = $('view');
 const vid = $('vid'), ui = $('ui'), msg = $('msg'), tapBtn = $('tap'), brand = $('brand');
-const S = { stage: q.has('stage'), mirror: true, glow: q.has('glow'), scan: false, model: q.get('model') || 'multiclass',
+const S = { stage: q.has('stage'), mirror: true, glow: q.has('glow'), pets: q.get('pets') !== '0', scan: false, model: q.get('model') || 'multiclass',
             segMs: 0, fps: 0, frames: 0, delegate: '', ready: false, viewer: q.has('watch') };
 window.__holo = S;
+S.petMask = () => petSmooth && { w: mw, h: mh, d: Array.from(petSmooth, v => Math.round(v * 255)) };
 S.maskStats = () => { if (!smooth) return null; let mn = 1, mx = 0, sum = 0; for (const v of smooth) { mn = Math.min(mn, v); mx = Math.max(mx, v); sum += v; } return { w: mw, h: mh, mn, mx, mean: sum / smooth.length }; };
 
 const say = (t, ms) => { msg.textContent = t; msg.style.opacity = 1; clearTimeout(say.t); if (ms) say.t = setTimeout(() => msg.style.opacity = 0, ms); };
@@ -30,6 +32,7 @@ ui.addEventListener('click', e => {
   const a = b.dataset.act;
   if (a === 'share') return share();
   if (a === 'rescan') return rescan();
+  if (a === 'pets') { S.pets = !S.pets; b.classList.toggle('on', S.pets); petSmooth = null; if (S.pets) loadPets(); return; }
   if (a === 'glow') { S.glow = !S.glow; b.textContent = S.glow ? 'Glow' : 'Clear'; b.classList.toggle('on', S.glow); return; }
   S[a] = !S[a]; b.classList.toggle('on', S[a]);
 });
@@ -131,7 +134,27 @@ function initGL() {
 // ---------- segmentation ----------
 const full = document.createElement('canvas'), fctx = full.getContext('2d');
 const scan = document.createElement('canvas'), sctx = scan.getContext('2d', { willReadFrequently: false });
-let seg, vision, mp, smooth, m8, mw = 0, mh = 0, segBusy = false;
+let seg, vision, mp, smooth, m8, mw = 0, mh = 0, segBusy = false, petSeg = null, petSmooth = null, petN = 0, petLoading = false;
+async function loadPets() {          // DeepLabV3 (Pascal VOC) for dogs + cats, merged with the person mask
+  if (petSeg || petLoading) return; petLoading = true;
+  try {
+    mp = mp || await import(`${MP_URL}/vision_bundle.mjs`);
+    vision = vision || await mp.FilesetResolver.forVisionTasks(`${MP_URL}/wasm`);
+    const o = d => ({ baseOptions: { modelAssetPath: MODELS.pets, delegate: q.get('delegate') === 'cpu' ? 'CPU' : d }, runningMode: 'VIDEO', outputCategoryMask: false, outputConfidenceMasks: true });
+    try { petSeg = await mp.ImageSegmenter.createFromOptions(vision, o('GPU')); } catch (e) { petSeg = await mp.ImageSegmenter.createFromOptions(vision, o('CPU')); }
+  } catch (e) { console.warn('pet model unavailable', e?.message); S.pets = false; syncButtons(); }
+  petLoading = false;
+}
+function segmentPets(ts) {
+  const t0 = performance.now();
+  petSeg.segmentForVideo(scan, ts, r => {
+    const ms = r.confidenceMasks; if (!ms || ms.length < 13) return;
+    const cat = ms[8].getAsFloat32Array(), dog = ms[12].getAsFloat32Array(), n = cat.length;
+    if (!petSmooth || petSmooth.length !== n) petSmooth = new Float32Array(n);
+    for (let i = 0; i < n; i++) { const v = Math.min(1, cat[i] + dog[i]), p = petSmooth[i]; petSmooth[i] = p + (v - p) * Math.min(1, .4 + Math.abs(v - p) * 2); }
+  });
+  const dt = performance.now() - t0; S.petMs = S.petMs ? S.petMs * .9 + dt * .1 : dt;
+}
 async function loadSeg(name) {
   mp = mp || await import(`${MP_URL}/vision_bundle.mjs`);
   vision = vision || await mp.FilesetResolver.forVisionTasks(`${MP_URL}/wasm`);
@@ -150,16 +173,18 @@ function segment(ts) {
   fctx.drawImage(vid, 0, 0);            // freeze this exact frame so colour and mask stay in sync
   sctx.drawImage(full, 0, 0, w, h);
   const t0 = performance.now();
+  if (S.pets && petSeg && (petN++ % 2 === 0)) segmentPets(ts);   // pets at half rate
   seg.segmentForVideo(scan, ts, r => {
     const ms = r.confidenceMasks; if (!ms || !ms.length) return;
     const mk = ms[0], W = mk.width, H = mk.height, raw = mk.getAsFloat32Array();
     const inv = ms.length > 1; // multiclass: channel 0 = background
     if (!smooth || mw !== W || mh !== H) { mw = W; mh = H; smooth = new Float32Array(W * H); m8 = new Uint8Array(W * H); for (let i = 0; i < smooth.length; i++) smooth[i] = inv ? 1 - raw[i] : raw[i]; }
+    const usePets = S.pets && petSmooth && petSmooth.length === smooth.length;
     for (let i = 0, n = smooth.length; i < n; i++) {
       const v = inv ? 1 - raw[i] : raw[i], p = smooth[i], d = v - p;
       // adaptive EMA: damp small flicker, follow real motion quickly
       const kk = Math.min(1, .28 + Math.abs(d) * 2.2);
-      const s = p + d * kk; smooth[i] = s; m8[i] = s * 255;
+      const s = p + d * kk; smooth[i] = s; m8[i] = (usePets && petSmooth[i] > s ? petSmooth[i] : s) * 255;
     }
   });
   const dt = performance.now() - t0; S.segMs = S.segMs ? S.segMs * .9 + dt * .1 : dt;
@@ -173,7 +198,8 @@ function frame(now) {
   const vw = vid.videoWidth, vh = vid.videoHeight;
   if (vid.currentTime !== lastVT) { lastVT = vid.currentTime; segment(now); fpsN++; }
   if (now - fpsT > 1000) { S.fps = fpsN * 1000 / (now - fpsT); fpsN = 0; fpsT = now; S.frames++;
-    if (S.model === 'multiclass' && !q.get('model') && S.frames === 4 && S.segMs > 40) { console.info('slow device, switching to the lighter selfie model'); loadSeg('selfie'); } }
+    if (S.model === 'multiclass' && !q.get('model') && S.frames === 4 && S.segMs > 40) { console.info('slow device, switching to the lighter selfie model'); loadSeg('selfie'); }
+    if (S.pets && !q.has('pets') && S.frames === 6 && (S.segMs + (S.petMs || 0) / 2) > 60) { console.info('slow device, People + Pets off'); S.pets = false; petSmooth = null; syncButtons(); say('People only (device is busy). Tap People + Pets to retry.', 4000); } }
   if (!smooth || !m8) return;
   gl.viewport(0, 0, view.width, view.height); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, vtex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, full);
@@ -198,7 +224,7 @@ async function start() {
     stream = await openCamera();
     vid.srcObject = stream; await vid.play();
     S.cam = vid.videoWidth + 'x' + vid.videoHeight;
-    say('Preparing hologram…'); initGL(); await loadSeg(S.model);
+    say('Preparing hologram…'); initGL(); await loadSeg(S.model); if (S.pets) loadPets();
     S.ready = true; fadeBrand(); syncButtons();
     if (!S.tipped) { S.tipped = true; say('Tip: Face a light, plain wall behind you.', 6000); } else say('', 1);
     if (!S.looping) { S.looping = true; requestAnimationFrame(frame); }
@@ -209,7 +235,7 @@ async function start() {
 }
 async function rescan() {
   say('Rescanning…'); S.ready = false;
-  stream?.getTracks().forEach(t => t.stop()); seg?.close(); seg = null; smooth = null; lastVT = -1; S.frames = 0; S.segMs = 0;
+  stream?.getTracks().forEach(t => t.stop()); seg?.close(); seg = null; smooth = null; petSmooth = null; lastVT = -1; S.frames = 0; S.segMs = 0;
   if (!q.get('model')) S.model = 'multiclass';
   try { stream = await openCamera(); vid.srcObject = stream; await vid.play(); S.cam = vid.videoWidth + 'x' + vid.videoHeight;
     await loadSeg(S.model); S.ready = true; say('Ready', 1500);
@@ -239,7 +265,7 @@ async function offerLink(id) {
 }
 
 function viewer(hostId) {
-  tapBtn.hidden = true; for (const b of ui.querySelectorAll('[data-act=share],[data-act=glow],[data-act=scan],[data-act=rescan]')) b.remove();
+  tapBtn.hidden = true; for (const b of ui.querySelectorAll('[data-act=pets],[data-act=share],[data-act=glow],[data-act=scan],[data-act=rescan]')) b.remove();
   vctx = view.getContext('2d'); S.mirror = false; S.ready = true; syncButtons(); fadeBrand();
   say('Connecting to hologram…');
   const rv = document.createElement('video'); rv.playsInline = true; rv.muted = true; rv.autoplay = true;
