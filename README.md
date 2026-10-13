@@ -1,39 +1,44 @@
-# Loving Grace Presence: Holographic Demo
+# Loving Grace Presence · Hologram Demo
 **Loving Grace Technologies, LLC** · Grenada, MS
 
-This free, browser-only demo turns an ordinary webcam into a live 3D "hologram" (a point cloud) that you can rotate. It runs entirely on your device. Video only leaves the device if you open the optional peer-to-peer link.
+**Live:** https://bridgett50.github.io/loving-grace-holo-demo/
 
-## Features
-- Webcam → **MediaPipe selfie segmentation** (removes the background) + **Depth Anything V2 Small** monocular depth (via transformers.js / ONNX Runtime Web, using WebGPU if available, otherwise WASM).
-- A live **three.js point cloud** with 160×120 points. Drag to rotate, and pinch or scroll to zoom. Sliders control depth strength and point size.
-- **Pepper's Ghost mode**: a black screen with 4 views (front, right, back, left), each oriented outward, for a phone or tablet pyramid or an acrylic stage reflector. Tap the ◆ button again to exit.
-- **WebXR**: an "Enter VR" button appears on supported headsets (Quest browser, etc.).
-- **Two-person link**: WebRTC peer-to-peer with copy/paste signaling, so no paid server is needed. It uses Google's public STUN. Very strict networks would need a TURN relay, which this demo does not include. Each side renders the *remote* person's video as a hologram on its own device.
-- Mobile-friendly layout. Models (about 25–30 MB) download on first use and are cached by the browser.
+A concert-style "Pepper's Ghost" hologram in the browser. Open the link, tap **Tap to appear** once (browsers need one tap to allow the camera), and you appear as clean, live video of yourself on pure black, full screen. No menus, settings or codes.
 
-## Run it
-It must be served over **https** or **localhost**, because browsers require that for camera access:
+## What it does
+- **Real camera video, not a point cloud.** Front camera, 1280×720 at 30 fps (ideal constraints).
+- **Person matting:** MediaPipe Image Segmenter, **selfie multiclass 256×256** model (background channel inverted = person), GPU delegate with CPU fallback. Slow devices (>40 ms per frame) switch automatically to the lighter **selfie segmenter** model.
+- **Clean edges:** adaptive temporal smoothing (damps flicker, follows real motion), joint-bilateral refinement that snaps the low-res mask to colour edges of the full-res frame, smoothstep tightening + feathering (no halo). The colour frame and its mask are kept in sync.
+- **Stage look (WebGL2 shader):** gentle lift/contrast/saturation, warm skin enhancement, subtle rim light, optional blue-white hologram tint (on by default, subtle), optional scanline shimmer (off by default).
+- **UI disappears.** The wordmark fades out after about 3.5 s; tapping the screen shows a small overlay for 3 s: **Stage mode** (4-way Pepper's Ghost pyramid layout on black), **Mirror**, **Holo tint**, **Scanlines**, **Share (beta)**.
+- **Share (beta):** creates a link `…/?watch=<id>` (native share sheet or clipboard). The other person just opens it. The *already-matted* hologram (background removed) is streamed peer-to-peer over WebRTC; signaling uses the free public PeerJS broker (0.peerjs.com) and public STUN. No TURN relay, so some strict/cellular networks will not connect, which is why it is labelled beta. Video only, no audio. The host must keep the page open.
+- **Old 3D point cloud** lives at [`/lab/`](https://bridgett50.github.io/loving-grace-holo-demo/lab/) (also `?mode=3d`). It is not the default.
+
+URL options (for testing): `?stage` (start in stage mode), `?model=selfie|multiclass`, `?delegate=cpu`, `?debug` (PeerJS logs).
+
+## Run locally
 ```
-cd holo_demo && python3 -m http.server 8000   # then open http://localhost:8000
+python3 -m http.server 8765   # then open http://localhost:8765 (camera needs https or localhost)
 ```
-Free hosting: upload the folder to GitHub Pages, Cloudflare Pages, or Netlify. All of them serve static files over https.
 
-## Open-source dependencies and licenses
-| Component | Use | License | How it is loaded |
+## Dependencies and licenses (Apache-2.0 / MIT only)
+| Component | Used by | License | Loaded from |
 |---|---|---|---|
-| three.js r170 (`three.module.js`, `OrbitControls.js`, `VRButton.js`) | 3D rendering, controls, WebXR button | MIT | vendored in `vendor/` (license in `vendor/LICENSE`) |
-| @huggingface/transformers (transformers.js) 3.0.2 | runs the depth model | Apache-2.0 | jsDelivr CDN |
-| ONNX Runtime Web (bundled by transformers.js) | WASM/WebGPU inference | MIT | jsDelivr CDN |
-| Depth Anything V2 **Small** (`onnx-community/depth-anything-v2-small`) | monocular depth weights | Apache-2.0 (**only the Small model**; Base/Large are CC-BY-NC-4.0, **do not swap them in**) | Hugging Face Hub |
-| @mediapipe/tasks-vision 0.10.14 | selfie segmentation runtime | Apache-2.0 | jsDelivr CDN |
-| MediaPipe Selfie Segmenter model (float16) | person mask | Apache-2.0 (per Google model card) | Google Storage |
-| WebRTC, WebXR, WebGL, WebGPU | browser-native APIs | n/a | built into browsers |
-| Google public STUN server | NAT discovery for the P2P link | free public service (no license) | `stun:stun.l.google.com:19302` |
+| @mediapipe/tasks-vision 0.10.14 | segmentation runtime (main + lab) | Apache-2.0 | jsDelivr CDN |
+| MediaPipe Selfie Multiclass Segmentation 256×256 model | person matting (default) | Apache-2.0 (Google model card) | Google Storage |
+| MediaPipe Selfie Segmenter model | fallback on slow devices; lab | Apache-2.0 (Google model card) | Google Storage |
+| PeerJS 1.5.4 (client) | Share (beta) | MIT | jsDelivr CDN |
+| PeerJS public cloud broker (0.peerjs.com) | signaling only | free public service (PeerServer is MIT) | network |
+| three.js r170 | `/lab/` only | MIT | vendored in `vendor/` |
+| @huggingface/transformers 3.0.2 + ONNX Runtime Web | `/lab/` only | Apache-2.0 / MIT | jsDelivr CDN |
+| Depth Anything V2 **Small** | `/lab/` only | Apache-2.0 (Small only; Base/Large are non-commercial, do not swap in) | Hugging Face Hub |
+| WebRTC, WebGL2, Fullscreen, Wake Lock | browser APIs | n/a | built in |
 
-No non-commercial code is used. REA was not installed or used.
+## Testing
+`test.js` (puppeteer-core) runs headless Chrome with `--use-file-for-fake-video-capture=person.y4m`. The clip is 3.5 s of a real person talking (public-domain interview video from the California Department of Corrections and Rehabilitation on Wikimedia Commons, cropped to 1280×720 and converted with ffmpeg). It screenshots the landing page, the default view, stage mode, the overlay and a desktop view. Result: **0 console errors and 0 page errors.**
 
-## Testing done (Oct 12, 2026)
-Headless Google Chrome was launched with `--use-fake-device-for-media-stream --use-fake-ui-for-media-stream` at a 412×860 mobile viewport. Both models loaded (WASM path; no GPU in headless). The 3D view, the rotated view and Pepper's Ghost mode all rendered. **0 console errors and 0 page errors.** Screenshots: `test_screenshot_*.png`. Test script: `test.js` (puppeteer-core).
-
-## Limits (honest)
-This is 2.5D: a single camera only sees the front of a person, so the back is not captured. Monocular depth is relative, not metric. On older phones expect roughly 2–8 depth updates per second. The design deliberately uses a single commodity camera, browser-standard codecs and published open models. It is not a multi-camera, network-controlled capture rig.
+## Honest limits
+- It is 2D video. That is what concert holograms are, and it only looks "3D" on a real Pepper's Ghost reflector/pyramid in a dark room.
+- The segmentation model is 256×256, so fine hair strands, fingers and fast motion can show soft or slightly late edges. Busy backgrounds with colours similar to the person's clothing or hair can leak at the edges.
+- The phone frame rate depends on the device. Recent phones should hold roughly 25–30 fps; older ones use the lighter model.
+- Share is beta: there is no TURN relay, so roughly 10–20% of network pairs (strict NAT/cellular) will not connect.
