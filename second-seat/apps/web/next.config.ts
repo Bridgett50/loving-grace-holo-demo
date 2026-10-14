@@ -7,6 +7,9 @@ const rootEnv = resolve(process.cwd(), "../../.env");
 if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 
 const nextConfig: NextConfig = {
+  // Next dev only serves its client runtime to localhost by default; without this, opening the app
+  // at 127.0.0.1 or a LAN IP renders but never hydrates, so buttons do nothing.
+  allowedDevOrigins: ["127.0.0.1", "localhost", "*.local", "192.168.*.*", "10.*.*.*"],
   transpilePackages: ["@second-seat/core"],
   experimental: {
     serverActions: { bodySizeLimit: "25mb" },
