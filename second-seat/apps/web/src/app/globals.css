@@ -165,6 +165,16 @@
 .twin-blink { animation: twin-blink 4.5s infinite; transform-origin: center; transform-box: fill-box; }
 .twin-mouth-talk { animation: twin-mouth 0.32s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
 .holo-glow { animation: holo-glow 2.4s ease-in-out infinite; }
+@keyframes twin-bar {
+  0%, 100% { height: 4px; }
+  50% { height: 18px; }
+}
+.twin-bar { height: 4px; animation: twin-bar 0.6s ease-in-out infinite; }
+@keyframes twin-lipflap {
+  0%, 18%, 52%, 70%, 100% { opacity: 0; }
+  24%, 44%, 76%, 92% { opacity: 1; }
+}
+.twin-lipflap { animation: twin-lipflap 0.9s linear infinite; }
 @media (prefers-reduced-motion: reduce) {
-  .twin-breathe, .twin-talk, .twin-blink, .twin-mouth-talk, .holo-glow { animation: none; }
+  .twin-breathe, .twin-talk, .twin-blink, .twin-mouth-talk, .holo-glow, .twin-bar, .twin-lipflap { animation: none; }
 }

@@ -30,6 +30,7 @@ export const CONNECTIONS: ConnectionDef[] = [
 
 export const BACKGROUNDS: BackgroundOption[] = [
   { id: "holo-black", name: "Hologram black", kind: "builtin", css: "radial-gradient(ellipse at 50% 35%, #1b2236 0%, #05060a 70%)" },
+  { id: "pastel-glow", name: "Soft pastel", kind: "builtin", css: "linear-gradient(100deg, #cdbfe8 0%, #e3c5e4 55%, #f6cadb 100%)" },
   { id: "studio-warm", name: "Warm studio", kind: "builtin", css: "linear-gradient(160deg, #f6e7d7 0%, #d9b99b 55%, #8f6b55 100%)" },
   { id: "office-soft", name: "Soft office", kind: "builtin", css: "linear-gradient(180deg, #e8eef5 0%, #c6d3e1 60%, #93a6bb 100%)" },
   { id: "grace-sunrise", name: "Loving Grace sunrise", kind: "builtin", css: "linear-gradient(150deg, #ffd9c2 0%, #f3a6b5 45%, #8a6fd1 100%)" },

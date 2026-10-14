@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { WalletCard } from "@/components/wallet-card";
+import { PASTEL_STAGE_CSS } from "@/lib/samples";
 import { isDemoMode } from "@/lib/server/current-user";
 import { loadBotData, loadOwner } from "@/lib/server/view-model";
 import { money } from "@/lib/types";
@@ -52,7 +53,7 @@ function Landing({ demo }: { demo: boolean }) {
           </div>
           {demo && <p className="text-sm text-muted-foreground">Demo mode: &ldquo;Watch a live demo&rdquo; skips the scan with a sample stylized twin and opens a scripted meeting.</p>}
         </div>
-        <TwinStage look="stylized" backgroundCss="radial-gradient(ellipse at 50% 35%, #2a2f4a 0%, #07080d 70%)" badge="AI Twin of Grace" speaking className="shadow-2xl ring-1 ring-black/10" />
+        <TwinStage look="stylized" backgroundCss={PASTEL_STAGE_CSS} badge="AI Twin of Bridgett" speaking className="shadow-2xl ring-1 ring-black/10" />
       </section>
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {features.map(({ icon: Icon, title, body }) => (

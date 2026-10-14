@@ -26,6 +26,7 @@ import { currentUserId, isDemoMode } from "@/lib/server/current-user";
 import { activeConsent, audit, newId, readDb, twinForOwner, updateDb, type Asset } from "@/lib/server/db";
 import { defaultRules, demoEvents, sampleKnowledge } from "@/lib/server/demo-seed";
 import { launchSession } from "@/lib/server/sessions";
+import { SAMPLE_OWNER } from "@/lib/samples";
 
 export type ActionResult<T = undefined> = { ok: true; data?: T } | { ok: false, error: string };
 
@@ -147,7 +148,7 @@ export async function createTwin(input: {
   }
 }
 
-function writeTwin(uid: string, name: string, twinId: string, consent: ConsentRecord, media: { look: TwinLook; scanAssetId: string; voiceAssetId: string; referenceAssetId?: string }) {
+function writeTwin(uid: string, name: string, twinId: string, consent: ConsentRecord, media: { look: TwinLook; scanAssetId: string; voiceAssetId: string; referenceAssetId?: string; referenceImageUrl?: string }) {
   const first = name.split(" ")[0];
   const persona: Persona = {
     tone: "Warm, concise and plain-spoken",
@@ -163,12 +164,12 @@ function writeTwin(uid: string, name: string, twinId: string, consent: ConsentRe
       ownerId: uid,
       displayName: name,
       look: media.look,
-      referenceImageUrl: media.referenceAssetId ? `/api/assets/${media.referenceAssetId}` : undefined,
+      referenceImageUrl: media.referenceAssetId ? `/api/assets/${media.referenceAssetId}` : media.referenceImageUrl,
       scanAssetId: media.scanAssetId,
       voiceSampleAssetId: media.voiceAssetId,
       voiceModelReady: true,
       avatarModelReady: true,
-      backgroundId: "holo-black",
+      backgroundId: media.look === "stylized" ? "pastel-glow" : "holo-black",
       persona,
       installedSkillIds: ["meeting-notes", "answer-from-notes"],
       createdAt: now,
@@ -186,7 +187,7 @@ function writeTwin(uid: string, name: string, twinId: string, consent: ConsentRe
 const ALL_SCOPES: ConsentScope[] = ["likeness_video", "voice_clone", "meeting_join", "recording", "knowledge_use"];
 
 /**
- * Demo mode only: skips the scan with a clearly labeled sample twin and drops straight into a scripted
+ * Demo mode only: skips the scan with a clearly labeled sample twin (the sample stylized character) and drops straight into a scripted
  * demo meeting, so the product can be seen in one click. Real twins always go through onboarding.
  */
 export async function startInstantDemo(): Promise<ActionResult> {
@@ -196,9 +197,9 @@ export async function startInstantDemo(): Promise<ActionResult> {
   try {
     const db = readDb();
     if (!twinForOwner(db, uid)) {
-      const name = db.users[uid]?.name ?? "Grace Lee";
+      const name = db.users[uid]?.name ?? SAMPLE_OWNER.name;
       updateDb((d) => {
-        d.users[uid] = d.users[uid] ?? { id: uid, name, email: "grace@example.com", createdAt: new Date().toISOString() };
+        d.users[uid] = d.users[uid] ?? { id: uid, name, email: SAMPLE_OWNER.email, createdAt: new Date().toISOString() };
         d.verifications[uid] = {
           userId: uid,
           status: "verified",

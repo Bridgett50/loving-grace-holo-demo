@@ -140,11 +140,11 @@ export function OnboardingWizard(props: { initialName: string; initialEmail: str
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="name">Full legal name</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" placeholder="Grace Lee" />
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" placeholder="Bridgett Sanders" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="grace@example.com" />
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" placeholder="bridgett@example.com" />
             </div>
           </CardContent>
           <CardFooter className="justify-end">
@@ -239,9 +239,9 @@ export function OnboardingWizard(props: { initialName: string; initialEmail: str
                     <p className="text-sm text-muted-foreground">
                       {l === "realistic"
                         ? disabled
-                          ? "Needs a clear frame of your face from your scan."
+                          ? "Needs a clear frame of your face from your scan. Shown here with a sample person."
                           : "Animated from your own video with photoreal lip-sync. Natural, not cartoonish."
-                        : "A friendly, polished 3D-style character with your voice. Great when you'd rather not appear on camera."}
+                        : "A polished animated-film style character built from your scan, with your voice. Shown here with a sample character."}
                     </p>
                   </div>
                 </button>

@@ -281,7 +281,8 @@ function KillSwitch({ onConfirm }: { onConfirm: () => void }) {
 function Transcript({ view }: { view: SessionView }) {
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    end.current?.scrollIntoView({ block: "nearest" });
+    const viewport = end.current?.closest<HTMLElement>('[data-slot="scroll-area-viewport"]');
+    if (viewport) viewport.scrollTop = viewport.scrollHeight;
   }, [view.transcript.length]);
   return (
     <ScrollArea className="h-[22rem] pr-3">

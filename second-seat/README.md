@@ -9,7 +9,7 @@ This repo is the MVP. It runs end to end in **demo mode** with no paid API keys.
 | `apps/web` | Next.js 16 web app (TypeScript, Tailwind, shadcn/ui) on port **4310**. Covers onboarding, the twin profile, meetings and calendar rules, the live session console (takeover and coach mode), the skills store and connections. |
 | `services/bot` | Meeting bot service (Hono) on port **4317**. Contains the session runner, the platform adapters (demo, Google Meet browser bot with a Vexa fallback, Zoom Meeting SDK, Teams Graph calling), the voice, avatar and answer providers, and the safeguards. |
 | `packages/core` | Shared, dependency-free logic: the session guard, the billing ledger, the contract and payment guardrails, disclosure, content credentials, ownership and consent, the latency budget, calendar rules, knowledge retrieval and meeting summaries. |
-| `docs/` | Setup, architecture, licensing and platform-approval notes. The product specs this MVP follows are in the repo root's [`docs/`](../docs). |
+| `docs/` | Setup, architecture, licensing and platform-approval notes. The product specs and art direction this MVP follows are in the repo root's [`docs/`](../docs). |
 
 ## Run it locally
 

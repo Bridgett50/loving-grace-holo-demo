@@ -1,6 +1,6 @@
 # License audit
 
-Policy: ship only permissively licensed code (MIT, Apache-2.0, BSD, ISC). No GPL or AGPL code is linked into the product. No model weights may carry a non-commercial restriction. No code or assets are copied from Pika or any other competitor. All brand art, avatar visuals (CSS and SVG) and copy in this repo are original.
+Policy: ship only permissively licensed code (MIT, Apache-2.0, BSD, ISC). No GPL or AGPL code is linked into the product. No model weights may carry a non-commercial restriction. No code or assets are copied from Pika or any other competitor. All brand art and copy in this repo are original. The sample twin images in `apps/web/public/samples/` were generated for this project. The stylized character follows Bridgett's own AI-self reference (`docs/reference/` in the GitHub repo) as art direction only: no Pika image, UI or code is included. The realistic sample shows a fictional person.
 
 This repo's own code is Apache-2.0.
 
