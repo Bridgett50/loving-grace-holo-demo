@@ -333,6 +333,26 @@ export async function addKnowledge(input: { title: string; content: string }): P
   }
 }
 
+/** Saves an approved post-meeting memory (owner answer or decision) as a note the twin can use next time. */
+export async function rememberMemory(input: { id: string; title: string; content: string }): Promise<ActionResult> {
+  try {
+    const uid = await currentUserId();
+    const twin = requireTwin(uid);
+    if (!/^mem_[a-z0-9]+$/.test(input.id)) return { ok: false, error: "Invalid memory." };
+    const content = input.content.trim().slice(0, 2000);
+    if (!content) return { ok: false, error: "Nothing to remember." };
+    updateDb((d) => {
+      if (d.knowledge.some((k) => k.id === input.id)) return;
+      d.knowledge.push({ id: input.id, twinId: twin.id, title: input.title.trim().slice(0, 160) || "Memory", content, source: "note", createdAt: new Date().toISOString() });
+      audit(d, uid, "memory_saved", input.id);
+    });
+    revalidatePath("/twin");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 export async function deleteKnowledge(id: string): Promise<ActionResult> {
   try {
     const uid = await currentUserId();

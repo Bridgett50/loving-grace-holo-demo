@@ -18,6 +18,7 @@ import { Progress } from "@/components/ui/progress";
 import { frameFromVideoElement, pickRecorderMime, referenceFrameFromFile, upload } from "@/lib/media";
 import { cn } from "@/lib/utils";
 import { useSafeTransition } from "@/lib/use-safe-transition";
+import { BRAND } from "@/lib/brand";
 
 const STEPS = ["About you", "Verify & scan", "Voice", "Look", "Consent"];
 const CHALLENGES = [
@@ -28,7 +29,7 @@ const CHALLENGES = [
   { id: "smile", label: "Give us a smile" },
 ];
 const VOICE_SCRIPT =
-  "Hi, this is my voice sample for my Second Seat twin. My twin will always tell people it's an AI, it will never agree to contracts or payments for me, and I can take over at any time.";
+  `Hi, this is my voice sample for my ${BRAND.name} twin. My twin will always tell people it's an AI, it will never agree to contracts or payments for me, and I can take over at any time.`;
 const SCOPES: Array<{ id: ConsentScope; label: string; required?: boolean }> = [
   { id: "likeness_video", label: "Use my face and likeness to animate my twin on video", required: true },
   { id: "voice_clone", label: "Clone my voice so my twin can speak", required: true },

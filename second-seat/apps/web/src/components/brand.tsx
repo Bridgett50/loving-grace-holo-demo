@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { BRAND } from "@/lib/brand";
 
 export function BrandMark({ className }: { className?: string }) {
   return (
@@ -23,8 +24,8 @@ export function Wordmark() {
     <span className="flex items-center gap-2">
       <BrandMark />
       <span className="leading-none">
-        <span className="block text-[15px] font-semibold tracking-tight">Second Seat</span>
-        <span className="block text-[11px] text-muted-foreground">by Loving Grace</span>
+        <span className="block text-[15px] font-semibold tracking-tight">{BRAND.name}</span>
+        <span className="block text-[11px] text-muted-foreground">by {BRAND.company}</span>
       </span>
     </span>
   );

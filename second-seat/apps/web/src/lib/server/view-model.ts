@@ -1,5 +1,5 @@
 import "server-only";
-import { BACKGROUNDS, isConsentActive, isVerified, resolveJoinMode } from "@second-seat/core";
+import { BACKGROUNDS, isConsentActive, isVerified, resolveJoinMode, type PastMeeting } from "@second-seat/core";
 import type { SessionView, Wallet } from "@/lib/types";
 import { getWallet, listSessions } from "./bot";
 import { currentUserId } from "./current-user";
@@ -47,4 +47,11 @@ export async function loadBotData(uid: string): Promise<{ wallet: Wallet | null;
   } catch (e) {
     return { wallet: null, sessions: null, error: (e as Error).message };
   }
+}
+
+/** Finished sessions with notes, in the shape the meeting-intelligence helpers expect. */
+export function pastMeetings(sessions: SessionView[] | null): PastMeeting[] {
+  return (sessions ?? [])
+    .filter((s) => s.transcript.length > 0)
+    .map((s) => ({ sessionId: s.id, title: s.meeting.title, at: s.createdAt, transcript: s.transcript, summary: s.summary }));
 }

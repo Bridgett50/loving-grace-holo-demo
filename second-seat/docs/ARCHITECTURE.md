@@ -46,6 +46,7 @@ Each utterance follows the same path:
 meeting speech ─► classifyIncoming ─► binding_request → refusal ("I can't agree to that…")
                                    ─► restricted_topic → defer to owner
                                    ─► question → brain (LLM grounded in notes, or BM25) → answer
+                                                 └─ not confident → "Ask me": owner answers live → relayed answer
                      ↓
            coach whisper (if any) shapes the next answer · takeover mutes the twin
                      ↓
@@ -56,6 +57,19 @@ meeting speech ─► classifyIncoming ─► binding_request → refusal ("I ca
 - `LatencyMonitor` tracks a 1000 ms end-to-end budget: STT 200, LLM 350, TTS 200, avatar 150, network 100. If the rolling turn time stays over budget and voice-only fallback is allowed, the session drops avatar video and keeps talking.
 - **Takeover:** the owner speaks or types, and the twin stays silent until it's handed back.
 - **Coach mode:** a *whisper* is private guidance applied to the next answer. *Say* makes the twin speak a line, which still passes the guardrail.
+- **Ask me:** when the notes don't answer a question, the twin tells the room it is checking and the owner gets the question live. Retrieval only counts as an answer when the best note scores high enough *and* covers at least 40% of the question's key terms, so a shared word or two doesn't turn into a wrong answer. The owner's reply is relayed as "*Name* just replied…", still passes `screenOutgoing`, and is remembered for the rest of the meeting. With no reply within `ASK_OWNER_TIMEOUT_MS` (60 s by default), or when the owner chooses it, the twin promises a follow-up and adds it to the "Needs your attention" list.
+
+## Meeting intelligence
+
+These features live in `packages/core/src/intelligence.ts` and run locally with no paid model.
+
+- **Pre-meeting brief** (Meetings → Brief): shows who's attending, the notes the twin will answer from, what was decided and left open last time, what it will defer, and a readiness score with tips for notes to add.
+- **Follow-through** (after a session): drafts a recap email (decisions, action items, the owner's live answers, and what's still owed), and suggests *memories*, meaning the owner's answers and the decisions. The owner approves a memory into their notes with one click. Nothing is sent or saved automatically.
+- **Ask your meetings** (`/ask`): searches every past transcript and note, and each answer cites its speaker and meeting.
+
+## Public demo mode
+
+With `DEMO_MODE=true` and `PUBLIC_DEMO=true`, `src/proxy.ts` gives each browser a random `ss_visitor` cookie (`v_<uuid>`). The cookie becomes the owner id for everything, including the twin, the wallet, sessions and notes, so visitors to a shared link never see each other's data. A request for another visitor's session gets a 404.
 
 ## Disclosure and provenance
 
@@ -104,5 +118,6 @@ The worker publishes into the session's LiveKit room. Browser bots (Meet, Zoom) 
 | GET | `/v1/owners/:owner/sessions` | Session history |
 | GET | `/v1/sessions/:id` | Live view: state, transcript, guard log, summary, credential |
 | POST | `/v1/sessions/:id/{takeover,coach,owner-says,end,demo-say}` | Owner controls (`actorId` must be the owner) |
+| POST | `/v1/sessions/:id/answer` | Answer an "Ask me" question (`questionId`, `text`), or `followUp: true` to defer it |
 | POST | `/v1/owners/:owner/stop-all` | Kill switch / consent revoked |
 | POST | `/v1/credentials/verify` | Verify a content credential |

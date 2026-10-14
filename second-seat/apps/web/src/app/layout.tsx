@@ -6,12 +6,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { botHealth } from "@/lib/server/bot";
 import { isDemoMode } from "@/lib/server/current-user";
 import "./globals.css";
+import { BRAND } from "@/lib/brand";
 
 const geistSans = Geist({ variable: "--font-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Second Seat by Loving Grace",
+  title: `${BRAND.name} by ${BRAND.company}`,
   description: "Your verified, always-disclosed AI meeting twin for Google Meet, Zoom and Microsoft Teams.",
 };
 

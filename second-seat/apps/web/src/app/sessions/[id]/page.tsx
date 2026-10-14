@@ -17,7 +17,9 @@ export default async function SessionPage({ params }: PageProps<"/sessions/[id]"
       imageSrc={o.twin.referenceImageUrl}
       backgroundCss={o.background.css}
       badge={badgeLabel(o.twin.displayName)}
+      ownerName={o.twin.displayName}
       ownerFirstName={o.twin.displayName.split(" ")[0]}
+      knowledge={o.knowledge}
       demoMode={isDemoMode}
     />
   );

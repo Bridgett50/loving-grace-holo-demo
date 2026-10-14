@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { bot } from "@/lib/server/bot";
 import { currentUserId } from "@/lib/server/current-user";
 
-const ACTIONS = new Set(["takeover", "coach", "owner-says", "end", "demo-say"]);
+const ACTIONS = new Set(["takeover", "coach", "owner-says", "end", "demo-say", "answer"]);
 
 export async function POST(req: Request, ctx: RouteContext<"/api/sessions/[id]/[action]">) {
   const { id, action } = await ctx.params;

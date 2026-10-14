@@ -11,6 +11,16 @@ import type {
 } from "@second-seat/core";
 
 /** Mirror of the bot service's SessionView (services/bot/src/session.ts). */
+export interface OwnerQuestion {
+  id: string;
+  askedAt: string;
+  askedBy: string;
+  question: string;
+  status: "pending" | "answered" | "follow_up";
+  answer?: string;
+  resolvedAt?: string;
+}
+
 export interface SessionView {
   id: string;
   createdAt: string;
@@ -53,6 +63,7 @@ export interface SessionView {
   transcript: TranscriptLine[];
   utterances: Array<{ id: number; at: string; text: string; kind: string }>;
   flagged: string[];
+  questions: OwnerQuestion[];
   log: SessionLogEntry[];
   summary?: MeetingSummary & { actionItems: ActionItem[] };
   summaryMarkdown?: string;

@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { buildBrief } from "@second-seat/core";
+import { BriefDialog } from "./brief-dialog";
 import { AutoJoinToggle, EventModeSelect, ResetCalendar, RuleEditor, RuleList } from "./controls";
 import { MODE_LABEL, PLATFORM_LABEL } from "@/components/status-pills";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { loadOwner } from "@/lib/server/view-model";
+import { loadBotData, loadOwner, pastMeetings } from "@/lib/server/view-model";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,8 @@ export default async function MeetingsPage() {
   const o = await loadOwner();
   if (!o.twin) redirect("/onboarding");
   const google = o.connections.google;
+  const past = pastMeetings((await loadBotData(o.uid)).sessions);
+  const twin = o.twin;
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -58,13 +62,16 @@ export default async function MeetingsPage() {
                       {PLATFORM_LABEL[event.platform]} · {event.attendeeEmails.length} attendee{event.attendeeEmails.length === 1 ? "" : "s"} · {MODE_LABEL[mode]} ({because})
                     </div>
                   </div>
-                  {launchedSessionId ? (
-                    <Button asChild size="sm" variant="secondary">
-                      <Link href={`/sessions/${launchedSessionId}`}>Open session</Link>
-                    </Button>
-                  ) : (
-                    <EventModeSelect eventId={event.id} value={event.modeOverride ?? "rule"} />
-                  )}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <BriefDialog title={event.title} brief={buildBrief({ event, knowledge: o.knowledge, persona: twin.persona, ownerName: twin.displayName, pastMeetings: past })} />
+                    {launchedSessionId ? (
+                      <Button asChild size="sm" variant="secondary">
+                        <Link href={`/sessions/${launchedSessionId}`}>Open session</Link>
+                      </Button>
+                    ) : (
+                      <EventModeSelect eventId={event.id} value={event.modeOverride ?? "rule"} />
+                    )}
+                  </div>
                 </div>
               );
             })}

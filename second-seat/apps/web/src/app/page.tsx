@@ -13,6 +13,7 @@ import { PASTEL_STAGE_CSS } from "@/lib/samples";
 import { isDemoMode } from "@/lib/server/current-user";
 import { loadBotData, loadOwner } from "@/lib/server/view-model";
 import { money } from "@/lib/types";
+import { BRAND } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ function Landing({ demo }: { demo: boolean }) {
           <Badge variant="secondary">AI meeting twin · always disclosed</Badge>
           <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">Your twin takes the second seat, so you don&apos;t have to be in every meeting.</h1>
           <p className="max-w-xl text-lg text-muted-foreground">
-            Second Seat joins your meetings as a clearly labeled AI twin. It looks and sounds like you, answers from your notes, and hands you a transcript, notes and action items afterwards.
+            {BRAND.name} joins your meetings as a clearly labeled AI twin. It looks and sounds like you, answers from your notes, and hands you a transcript, notes and action items afterwards.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button asChild size="lg">

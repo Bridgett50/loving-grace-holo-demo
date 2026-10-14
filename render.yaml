@@ -1,0 +1,33 @@
+# Render Blueprint for Second Seat (the app lives in second-seat/). New > Blueprint, then pick this repo.
+# One web service runs the website and the bot together, with a disk for demo data.
+services:
+  - type: web
+    name: second-seat
+    runtime: docker
+    plan: starter
+    rootDir: second-seat
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    disk:
+      name: second-seat-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DEMO_MODE
+        value: "true"
+      - key: PUBLIC_DEMO
+        value: "true"
+      - key: DATA_DIR
+        value: /data
+      - key: BOT_SERVICE_TOKEN
+        generateValue: true
+      - key: CONTENT_CREDENTIALS_SECRET
+        generateValue: true
+      - key: AUTO_JOIN_SCHEDULER
+        value: "false"
+      # Set to your Render URL (for example https://second-seat.onrender.com) before turning on OAuth connections.
+      - key: APP_URL
+        sync: false
+      - key: NEXT_PUBLIC_PRODUCT_NAME
+        value: Second Seat

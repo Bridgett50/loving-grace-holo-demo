@@ -29,7 +29,19 @@ Open http://localhost:4310 and click **Create my twin**. In demo mode:
 - a scripted **Demo meeting** shows up on your calendar a few minutes out. You can also send your twin to it right away from **Meetings**;
 - the **Demo fault** menu lets you watch each safeguard trigger: no video, a silent avatar, a failed join, or a slow avatar.
 
-Run each service alone with `pnpm dev:web` or `pnpm dev:bot`.
+Run each service alone with `pnpm dev:web` or `pnpm dev:bot`. **Watch a live demo** on the home page skips onboarding: it creates a sample twin and drops you straight into a meeting.
+
+## What makes it AI-native
+
+- **Ask me, live.** When a question isn't in your notes, the twin doesn't make something up. It tells the room it's checking with you, and the question pops up on your screen. Your answer is relayed into the meeting within seconds. If you don't answer, the twin promises a follow-up and tracks it for you.
+- **Pre-meeting brief.** For every calendar event the twin shows who's coming, what it can answer, what was left open last time and what it will defer, along with a readiness score that tells you which notes to add.
+- **Follow-through.** After each meeting it drafts the recap email and suggests memories (your live answers, the decisions) that you approve into its knowledge with one click. Every meeting makes it smarter, and only with your approval.
+- **Ask your meetings.** Search everything your twin heard and everything in your notes. Each answer cites who said it and in which meeting.
+- **Coach and takeover.** You can whisper private guidance into its next answer, or take the seat yourself at any moment.
+
+## Put it online
+
+The fastest path is a public demo link: every visitor gets their own private sandbox, and no API keys are needed. `render.yaml` (at the repo root) and the `Dockerfile` handle it, and [docs/DEPLOY.md](docs/DEPLOY.md) has the step-by-step guide.
 
 ## Checks
 

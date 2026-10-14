@@ -1,3 +1,4 @@
+import { classifyIncoming } from "./safeguards/guardrails";
 import type { ActionItem, MeetingSummary, TranscriptLine } from "./types";
 
 /**
@@ -16,26 +17,36 @@ const ACTION_PATTERNS: RegExp[] = [
 const DUE_RE = /\b(by|before|on|due)\s+((?:next\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|today|end of (?:day|week|month)|eod|eow|[A-Z][a-z]{2,8}\s+\d{1,2}))/i;
 const DECISION_RE = /\b(we decided|we agreed|decision:|let'?s go with|we'?ll go with|final answer is|approved the plan)\b/i;
 
-function resolveOwner(who: string | undefined, speaker: string): string {
-  if (!who) return speaker;
+function resolveOwner(who: string | undefined, line: TranscriptLine, ownerName?: string): string {
+  if (!who) return line.speaker;
   const w = who.toLowerCase();
-  if (w === "i") return speaker;
+  if (w === "i") return line.speaker;
   if (w === "we") return "Team";
-  if (w === "you") return "Assignee (addressed)";
+  if (w === "you") {
+    // In a twin-attended meeting, "you" is the twin (and so its owner) unless someone is named first.
+    const named = line.text.match(/^([A-Z][a-z]+),/)?.[1];
+    if (named && named.toLowerCase() !== "twin" && named.toLowerCase() !== ownerName?.split(" ")[0].toLowerCase()) return named;
+    return ownerName ?? "You";
+  }
   return who;
 }
 
-export function extractActionItems(lines: TranscriptLine[]): ActionItem[] {
+/**
+ * Only people's commitments count. The twin's own lines are skipped (its promises are tracked as
+ * owner questions), and binding requests are skipped because they are already flagged for the owner.
+ */
+export function extractActionItems(lines: TranscriptLine[], ownerName?: string): ActionItem[] {
   const items: ActionItem[] = [];
   for (const line of lines) {
-    if (line.isTwin && /can't agree|flagged this/i.test(line.text)) continue;
+    if (line.isTwin) continue;
+    if (classifyIncoming(line.text).intent === "binding_request") continue;
     for (const re of ACTION_PATTERNS) {
       const m = line.text.match(re);
       if (m?.groups?.what) {
         const due = line.text.match(DUE_RE)?.[2];
         const text = m.groups.what.replace(DUE_RE, "").trim().replace(/\s+/g, " ");
         if (text.split(" ").length < 2) continue;
-        items.push({ owner: resolveOwner(m.groups.who, line.speaker), text: text.charAt(0).toUpperCase() + text.slice(1), due });
+        items.push({ owner: resolveOwner(m.groups.who, line, ownerName), text: text.charAt(0).toUpperCase() + text.slice(1), due });
         break;
       }
     }
@@ -49,7 +60,7 @@ export function extractActionItems(lines: TranscriptLine[]): ActionItem[] {
   });
 }
 
-export function summarizeTranscript(lines: TranscriptLine[], flaggedForOwner: string[] = []): MeetingSummary {
+export function summarizeTranscript(lines: TranscriptLine[], flaggedForOwner: string[] = [], ownerName?: string): MeetingSummary {
   const human = lines.filter((l) => !l.isTwin);
   const speakers = [...new Set(human.map((l) => l.speaker))];
   const decisions = lines.filter((l) => DECISION_RE.test(l.text)).map((l) => `${l.speaker}: ${l.text}`);
@@ -60,7 +71,7 @@ export function summarizeTranscript(lines: TranscriptLine[], flaggedForOwner: st
   ];
   const twinAnswers = lines.filter((l) => l.isTwin && l.text.startsWith("From my notes")).length;
   if (twinAnswers) notes.push(`The twin answered ${twinAnswers} question${twinAnswers === 1 ? "" : "s"} from your notes.`);
-  return { transcript: lines, notes, actionItems: extractActionItems(lines), decisions, flaggedForOwner };
+  return { transcript: lines, notes, actionItems: extractActionItems(lines, ownerName), decisions, flaggedForOwner };
 }
 
 export function summaryToMarkdown(title: string, s: MeetingSummary): string {

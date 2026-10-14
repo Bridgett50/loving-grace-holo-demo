@@ -2,6 +2,7 @@
 
 import { useCallback, useTransition } from "react";
 import { toast } from "sonner";
+import { BRAND } from "@/lib/brand";
 
 function isNextControlFlow(e: unknown): boolean {
   const digest = (e as { digest?: unknown } | null)?.digest;
@@ -19,7 +20,7 @@ export function useSafeTransition(): [boolean, (fn: () => Promise<void>) => void
         } catch (e) {
           if (isNextControlFlow(e)) throw e;
           console.error(e);
-          toast.error("Couldn't reach Second Seat. Check your connection and try again.");
+          toast.error(`Couldn't reach ${BRAND.name}. Check your connection and try again.`);
         }
       }),
     [],

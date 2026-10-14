@@ -66,7 +66,18 @@ export interface TwinUtterance {
   id: number;
   at: string;
   text: string;
-  kind: "disclosure" | "answer" | "refusal" | "coach" | "handoff";
+  kind: "disclosure" | "answer" | "refusal" | "coach" | "handoff" | "relay";
+}
+
+/** A question the twin couldn't answer from notes, routed to the owner live ("Ask me"). */
+export interface OwnerQuestion {
+  id: string;
+  askedAt: string;
+  askedBy: string;
+  question: string;
+  status: "pending" | "answered" | "follow_up";
+  answer?: string;
+  resolvedAt?: string;
 }
 
 export interface SessionDeps {
@@ -77,6 +88,8 @@ export interface SessionDeps {
   brain?: Brain;
   /** Simulated speech-to-text latency when the adapter does not report it. */
   sttMs?: number;
+  /** How long the twin waits for the owner to answer an "Ask me" question before promising a follow-up. */
+  askOwnerTimeoutMs?: number;
   onFinalized?: (s: SessionRunner) => void;
 }
 
@@ -92,6 +105,7 @@ export class SessionRunner {
   readonly utterances: TwinUtterance[] = [];
   readonly flagged: string[] = [];
   readonly notes: SessionLogEntry[] = [];
+  readonly questions: OwnerQuestion[] = [];
   preflight?: PreflightResult;
   adapter?: MeetingAdapter;
   adapterAttempts: Array<{ adapter: string; ok: boolean; error?: string }> = [];
@@ -233,6 +247,10 @@ export class SessionRunner {
       return;
     }
     if (this.guard.isLive && !this.disclosure.has("intro")) void this.deliverDisclosure();
+    const timeout = this.deps.askOwnerTimeoutMs ?? config.askOwnerTimeoutMs;
+    for (const q of this.questions) {
+      if (q.status === "pending" && Date.now() - Date.parse(q.askedAt) > timeout) void this.deferQuestion(q.id);
+    }
   }
 
   private async deliverDisclosure() {
@@ -294,9 +312,44 @@ export class SessionRunner {
         this.log("error", "brain_failed", { error: String(e) });
         answer = { text: this.req.twin.persona.deferralPhrase, sources: [], confident: false, latencyMs: 0 };
       }
-      if (!answer.confident) this.flagged.push(`Couldn't answer from your notes: ${speaker} asked "${text}"`);
+      if (!answer.confident) {
+        await this.askOwner(speaker, text);
+        return;
+      }
       await this.say(answer.text, "answer", false, answer.latencyMs);
     }
+  }
+
+  /**
+   * "Ask me": instead of a dead-end "I don't know", the twin tells the room it is checking, and the
+   * owner gets the question live (console, and phone when connected). The answer is relayed, labeled
+   * as coming from the owner, and remembered for the rest of the meeting.
+   */
+  private async askOwner(speaker: string, question: string) {
+    const q: OwnerQuestion = { id: `q${this.questions.length + 1}`, askedAt: new Date().toISOString(), askedBy: speaker, question, status: "pending" };
+    this.questions.push(q);
+    this.log("info", "asked_owner", { questionId: q.id, speaker });
+    await this.say(`Good question, ${speaker.split(" ")[0]}. That isn't in my notes, so I'm checking with ${this.first} right now and I'll come back to it.`, "answer");
+  }
+
+  async answerQuestion(id: string, answer: string): Promise<void> {
+    const q = this.questions.find((x) => x.id === id);
+    if (!q || q.status !== "pending" || this.guard.isTerminal || !answer) return;
+    q.status = "answered";
+    q.answer = answer;
+    q.resolvedAt = new Date().toISOString();
+    this.whispers.unshift({ id: `answer_${q.id}`, twinId: this.req.twin.id, title: q.question, content: answer, source: "note", createdAt: q.resolvedAt });
+    this.log("info", "owner_answered", { questionId: q.id });
+    await this.say(`${this.first} just replied to ${q.askedBy.split(" ")[0]}'s question: ${answer}`, "relay");
+  }
+
+  async deferQuestion(id: string, silent = false): Promise<void> {
+    const q = this.questions.find((x) => x.id === id);
+    if (!q || q.status !== "pending") return;
+    q.status = "follow_up";
+    q.resolvedAt = new Date().toISOString();
+    this.flagged.push(`Follow up with ${q.askedBy}: "${q.question}"`);
+    if (!silent && !this.guard.isTerminal) await this.say(`${this.first} will follow up with you directly on that after the meeting, ${q.askedBy.split(" ")[0]}.`, "answer");
   }
 
   /** "Can you share X with the team?" right after the twin spoke counts as addressed to the twin. */
@@ -383,12 +436,13 @@ export class SessionRunner {
     if (this.finalized) return;
     this.finalized = true;
     clearInterval(this.timer);
+    for (const q of this.questions) if (q.status === "pending") void this.deferQuestion(q.id, true);
     this.avatar.stop();
     void this.adapter?.leave().catch(() => undefined);
     const billing = this.guard.snapshot.billing;
     if (billing && billing.reservedCents > 0) this.settlement = this.deps.ledger.settle(this.id, billing);
     if (this.guard.snapshot.joinedAt !== undefined) {
-      this.summary = summarizeTranscript(this.transcript, this.flagged);
+      this.summary = summarizeTranscript(this.transcript, this.flagged, this.req.twin.displayName);
       this.summaryMarkdown = embedTextWatermark(summaryToMarkdown(this.req.meeting.title, this.summary), this.id);
       void createContentCredential(
         { asset: this.summaryMarkdown, assetType: "summary", ownerName: this.req.twin.displayName, twinId: this.req.twin.id, sessionId: this.id },
@@ -447,6 +501,7 @@ export class SessionRunner {
       transcript: this.transcript,
       utterances: this.utterances,
       flagged: this.flagged,
+      questions: this.questions,
       log: [...this.guard.entries, ...this.notes].sort((a, b) => a.at.localeCompare(b.at)),
       summary: this.summary,
       summaryMarkdown: this.summaryMarkdown,

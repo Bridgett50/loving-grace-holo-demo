@@ -76,6 +76,10 @@ export function createApp(store = new BotStore()) {
   app.post("/v1/sessions/:id/takeover", withRunner((r, b) => r.setTakeover(!!b.on)));
   app.post("/v1/sessions/:id/coach", withRunner((r, b) => r.coach(String(b.text ?? "").slice(0, 500), b.kind === "say" ? "say" : "whisper")));
   app.post("/v1/sessions/:id/owner-says", withRunner((r, b) => r.ownerSays(String(b.text ?? "").slice(0, 500))));
+  app.post(
+    "/v1/sessions/:id/answer",
+    withRunner((r, b) => (b.followUp ? r.deferQuestion(String(b.questionId)) : r.answerQuestion(String(b.questionId), String(b.text ?? "").trim().slice(0, 500)))),
+  );
   app.post("/v1/sessions/:id/end", withRunner((r, b) => r.end(b.reason === "kill_switch" ? "kill_switch" : "owner_ended")));
   app.post(
     "/v1/sessions/:id/demo-say",

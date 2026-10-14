@@ -15,7 +15,8 @@ function script(first: string): ScriptLine[] {
     { afterMs: 9_000, speaker: "Priya", text: "Can you share the voice sample checklist with the team?" },
     { afterMs: 8_000, speaker: "Maya (host)", text: `Twin, who is leading the voice pipeline work?` },
     { afterMs: 8_000, speaker: "Pat (vendor)", text: `What does ${first} think about hiring two more engineers in Q1?` },
-    { afterMs: 8_000, speaker: "Maya (host)", text: "We decided to move the design review to next Tuesday." },
+    { afterMs: 6_000, speaker: "Maya (host)", text: "No rush, let's keep going while we wait on that." },
+    { afterMs: 20_000, speaker: "Maya (host)", text: "We decided to move the design review to next Tuesday." },
     { afterMs: 9_000, speaker: "Maya (host)", text: "That's everything for today. Thanks, all." },
   ];
 }

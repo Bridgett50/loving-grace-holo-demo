@@ -10,3 +10,4 @@ export * from "./calendar";
 export * from "./knowledge";
 export * from "./summary";
 export * from "./catalog";
+export * from "./intelligence";

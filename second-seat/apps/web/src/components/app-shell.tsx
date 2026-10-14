@@ -2,18 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarClock, Home, Menu, Plug, Radio, Sparkles, UserRound } from "lucide-react";
+import { CalendarClock, Home, Menu, MessageCircleQuestion, Plug, Radio, Sparkles, UserRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Wordmark } from "@/components/brand";
 import { cn } from "@/lib/utils";
+import { BRAND } from "@/lib/brand";
 
 const NAV = [
   { href: "/", label: "Home", icon: Home },
   { href: "/twin", label: "My twin", icon: UserRound },
   { href: "/meetings", label: "Meetings", icon: CalendarClock },
   { href: "/sessions", label: "Sessions", icon: Radio },
+  { href: "/ask", label: "Ask", icon: MessageCircleQuestion },
   { href: "/skills", label: "Skills", icon: Sparkles },
   { href: "/connections", label: "Connections", icon: Plug },
 ];
@@ -48,7 +50,7 @@ export function AppShell({ children, demoMode, botOnline }: { children: React.Re
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
-          <Link href="/" aria-label="Second Seat home">
+          <Link href="/" aria-label={`${BRAND.name} home`}>
             <Wordmark />
           </Link>
           <nav className="ml-6 hidden items-center gap-1 lg:flex" aria-label="Main">
@@ -91,7 +93,7 @@ export function AppShell({ children, demoMode, botOnline }: { children: React.Re
       )}
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">{children}</main>
       <footer className="border-t py-6 text-center text-xs text-muted-foreground">
-        Second Seat always discloses that it is an AI twin, never agrees to contracts or payments, and only runs for its verified owner.
+        {BRAND.name} always discloses that it is an AI twin, never agrees to contracts or payments, and only runs for its verified owner.
       </footer>
     </div>
   );

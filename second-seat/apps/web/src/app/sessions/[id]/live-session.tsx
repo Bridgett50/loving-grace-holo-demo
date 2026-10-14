@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowLeft, Download, Hand, Loader2, MessageSquareText, OctagonX, PhoneOff, Send, ShieldCheck, Undo2, Volume2, VolumeX, Wand2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Brain, Check, Copy, Download, Hand, Loader2, Mail, MessageSquareText, OctagonX, PhoneOff, Send, ShieldCheck, Undo2, Volume2, VolumeX, Wand2 } from "lucide-react";
+import { draftFollowUp, suggestMemories, type KnowledgeDoc } from "@second-seat/core";
+import { rememberMemory } from "@/app/actions";
 import { toast } from "sonner";
 import { PLATFORM_LABEL, SessionStateBadge } from "@/components/status-pills";
 import { TwinStage } from "@/components/twin-avatar";
@@ -76,7 +78,7 @@ async function act(id: string, action: string, body: Record<string, unknown> = {
   return json;
 }
 
-export function LiveSession(props: { id: string; look: "realistic" | "stylized"; imageSrc?: string; backgroundCss: string; badge: string; ownerFirstName: string; demoMode: boolean }) {
+export function LiveSession(props: { id: string; look: "realistic" | "stylized"; imageSrc?: string; backgroundCss: string; badge: string; ownerName: string; ownerFirstName: string; demoMode: boolean; knowledge: KnowledgeDoc[] }) {
   const { view, setView, error } = useSession(props.id);
   const [voiceOn, setVoiceOn] = useState(false);
   const [speaking, setSpeaking] = useState(false);
@@ -198,6 +200,8 @@ export function LiveSession(props: { id: string; look: "realistic" | "stylized";
             )}
           </div>
 
+          {isLive && <AskMe view={view} id={props.id} ownerFirstName={props.ownerFirstName} onUpdate={update} />}
+
           {isLive && (
             <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
               <Button
@@ -218,6 +222,7 @@ export function LiveSession(props: { id: string; look: "realistic" | "stylized";
 
           {view.takeover && isLive && <OwnerSays id={props.id} onUpdate={update} />}
           {!isLive && <Summary view={view} />}
+          {!isLive && view.summary && <FollowThrough view={view} ownerName={props.ownerName} knowledge={props.knowledge} />}
         </div>
 
         <Card className="min-h-[28rem]">
@@ -247,6 +252,97 @@ export function LiveSession(props: { id: string; look: "realistic" | "stylized";
         </Card>
       </div>
     </div>
+  );
+}
+
+/** Live "Ask me": questions the twin couldn't answer from notes, answered by the owner in one tap. */
+function AskMe({ view, id, ownerFirstName, onUpdate }: { view: SessionView; id: string; ownerFirstName: string; onUpdate: (v: SessionView | null) => void }) {
+  const pending = (view.questions ?? []).filter((q) => q.status === "pending");
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+  const [now, setNow] = useState(0);
+  const seen = useRef(new Set<string>());
+  const pendingKey = pending.map((q) => q.id).join(",");
+
+  useEffect(() => {
+    const fresh = (view.questions ?? []).filter((q) => q.status === "pending" && !seen.current.has(q.id));
+    if (!fresh.length) return;
+    fresh.forEach((q) => seen.current.add(q.id));
+    toast.message(`${fresh[0].askedBy} asked your twin something it needs you for`, { description: fresh[0].question });
+    const original = document.title;
+    let on = false;
+    const blink = setInterval(() => {
+      on = !on;
+      document.title = on ? "● Your twin needs you" : original;
+    }, 900);
+    const stop = setTimeout(() => {
+      clearInterval(blink);
+      document.title = original;
+    }, 12_000);
+    return () => {
+      clearInterval(blink);
+      clearTimeout(stop);
+      document.title = original;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingKey]);
+
+  useEffect(() => {
+    if (!pending.length) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [pending.length]);
+
+  if (!pending.length) return null;
+  const send = async (questionId: string, followUp = false) => {
+    setBusy(questionId);
+    onUpdate(await act(id, "answer", followUp ? { questionId, followUp: true } : { questionId, text: drafts[questionId] ?? "" }));
+    setBusy(null);
+  };
+  return (
+    <Card className="border-primary/40 bg-primary/5 shadow-md">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <span className="relative flex size-2.5">
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60" />
+            <span className="relative inline-flex size-2.5 rounded-full bg-primary" />
+          </span>
+          Your twin is asking you
+        </CardTitle>
+        <CardDescription>It told the room it&apos;s checking with you. Your reply is relayed live as &ldquo;{ownerFirstName} just replied&rdquo;, and it still can&apos;t commit you to contracts or payments.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {pending.map((q) => {
+          const waited = now ? Math.max(0, Math.floor((now - Date.parse(q.askedAt)) / 1000)) : 0;
+          return (
+            <form
+              key={q.id}
+              className="space-y-2 rounded-lg border bg-background p-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if ((drafts[q.id] ?? "").trim()) void send(q.id);
+              }}
+            >
+              <div className="flex items-start justify-between gap-2 text-sm">
+                <p>
+                  <span className="font-medium">{q.askedBy}:</span> &ldquo;{q.question}&rdquo;
+                </p>
+                {waited > 0 && <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{waited}s</span>}
+              </div>
+              <div className="flex gap-2">
+                <Input autoFocus placeholder="Type your answer…" value={drafts[q.id] ?? ""} onChange={(e) => setDrafts((d) => ({ ...d, [q.id]: e.target.value }))} maxLength={500} aria-label={`Answer to ${q.askedBy}`} />
+                <Button type="submit" disabled={busy === q.id || !(drafts[q.id] ?? "").trim()}>
+                  {busy === q.id ? <Loader2 className="animate-spin" /> : <Send />} Send
+                </Button>
+              </div>
+              <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" disabled={busy === q.id} onClick={() => void send(q.id, true)}>
+                I&apos;ll follow up after the meeting
+              </Button>
+            </form>
+          );
+        })}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -474,6 +570,95 @@ function Safeguards({ view }: { view: SessionView }) {
         )}
       </div>
     </ScrollArea>
+  );
+}
+
+/** After the meeting: a recap the owner reviews and sends, and memories the owner approves for next time. */
+function FollowThrough({ view, ownerName, knowledge }: { view: SessionView; ownerName: string; knowledge: KnowledgeDoc[] }) {
+  const draft = useMemo(() => draftFollowUp({ title: view.meeting.title, ownerName, summary: view.summary!, questions: view.questions }), [view.meeting.title, ownerName, view.summary, view.questions]);
+  // Suggestions use the notes as they were on arrival, so a memory saved here stays visible as "Saved".
+  const [knowledgeAtOpen] = useState(knowledge);
+  const memories = useMemo(() => suggestMemories({ sessionId: view.id, title: view.meeting.title, summary: view.summary, questions: view.questions, knowledge: knowledgeAtOpen }), [view.id, view.meeting.title, view.summary, view.questions, knowledgeAtOpen]);
+  const [body, setBody] = useState(draft.body);
+  const [saved, setSaved] = useState<Set<string>>(new Set());
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [copied, setCopied] = useState(false);
+  const visible = memories.filter((m) => !dismissed.has(m.id));
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Wand2 className="size-4 text-primary" /> Follow-through
+        </CardTitle>
+        <CardDescription>Your twin drafted the recap and spotted what to remember. Nothing is sent or saved until you say so.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Recap email · {draft.subject}</div>
+          <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={10} className="font-mono text-xs" aria-label="Recap email draft" />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                await navigator.clipboard.writeText(`Subject: ${draft.subject}\n\n${body}`);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              }}
+            >
+              {copied ? <Check /> : <Copy />} {copied ? "Copied" : "Copy"}
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <a href={`mailto:?subject=${encodeURIComponent(draft.subject)}&body=${encodeURIComponent(body)}`}>
+                <Mail /> Open in email
+              </a>
+            </Button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-sm font-medium">
+            <Brain className="size-4 text-primary" /> Remember for next time
+          </div>
+          {visible.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{memories.length ? "All handled." : "Nothing new to remember from this meeting."}</p>
+          ) : (
+            <ul className="space-y-2">
+              {visible.map((m) => (
+                <li key={m.id} className="flex flex-col gap-2 rounded-lg border p-3 text-sm sm:flex-row sm:items-center">
+                  <div className="min-w-0 flex-1">
+                    <Badge variant="secondary" className="mb-1">{m.kind === "owner_answer" ? "Your answer" : "Decision"}</Badge>
+                    <div className="font-medium">{m.title}</div>
+                    <div className="text-muted-foreground">{m.content}</div>
+                  </div>
+                  {saved.has(m.id) ? (
+                    <span className="flex items-center gap-1 text-xs text-success">
+                      <Check className="size-3.5" /> Saved to notes
+                    </span>
+                  ) : (
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          const r = await rememberMemory({ id: m.id, title: m.title, content: m.content });
+                          if (r.ok) setSaved((x) => new Set(x).add(m.id));
+                          else toast.error(r.error);
+                        }}
+                      >
+                        Remember
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setDismissed((x) => new Set(x).add(m.id))}>
+                        Skip
+                      </Button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

@@ -236,3 +236,44 @@ describe("live takeover and coach mode", () => {
     r.end("owner_ended");
   });
 });
+
+describe("Ask me relay", () => {
+  it("routes an unknown question to the owner and relays the answer, labeled as the owner's", async () => {
+    const r = await store.start(request());
+    await vi.advanceTimersByTimeAsync(6_000);
+    await r.onSpeech("Pat (vendor)", "Grace, what's your view on opening a Denver office?");
+    const q = r.view().questions[0];
+    expect(q).toMatchObject({ status: "pending", askedBy: "Pat (vendor)" });
+    expect(r.view().utterances.at(-1)?.text).toMatch(/checking with Grace/);
+
+    await r.answerQuestion(q.id, "Not this year; we're focused on Atlanta first.");
+    expect(r.view().questions[0].status).toBe("answered");
+    expect(r.view().utterances.at(-1)).toMatchObject({ kind: "relay" });
+    expect(r.view().utterances.at(-1)?.text).toMatch(/Grace just replied to Pat's question: Not this year/);
+
+    await r.onSpeech("Maya", "Grace, are we opening a Denver office?");
+    expect(r.view().utterances.at(-1)?.text).toMatch(/Atlanta/);
+    r.end("owner_ended");
+  });
+
+  it("an owner answer still cannot commit to contracts or payments", async () => {
+    const r = await store.start(request());
+    await vi.advanceTimersByTimeAsync(6_000);
+    await r.onSpeech("Pat (vendor)", "Grace, what's your view on the new vendor?");
+    await r.answerQuestion(r.view().questions[0].id, "Yes, I'll sign the contract and wire the payment today.");
+    expect(r.view().utterances.at(-1)?.text).toMatch(/can't agree to contracts/);
+    r.end("owner_ended");
+  });
+
+  it("promises a follow-up when the owner doesn't reply in time, and lists it in the notes", async () => {
+    const r = await store.start(request());
+    await vi.advanceTimersByTimeAsync(6_000);
+    await r.onSpeech("Pat (vendor)", "Grace, what's your view on opening a Denver office?");
+    await vi.advanceTimersByTimeAsync(config.askOwnerTimeoutMs + 1_000);
+    const q = r.view().questions.find((x) => x.question.includes("Denver"))!;
+    expect(q.status).toBe("follow_up");
+    expect(r.view().transcript.some((l) => l.isTwin && /follow up with you directly/.test(l.text))).toBe(true);
+    r.end("owner_ended");
+    expect(r.view().summary?.flaggedForOwner.join(" ")).toMatch(/Follow up with Pat \(vendor\).*Denver/);
+  });
+});

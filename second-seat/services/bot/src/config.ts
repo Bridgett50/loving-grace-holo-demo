@@ -19,6 +19,7 @@ export const config = {
   defaultCapMinutes: num("DEFAULT_SESSION_MINUTES", 30),
   demoStartingBalanceCents: num("DEMO_STARTING_BALANCE_CENTS", 2000),
   tickMs: num("GUARD_TICK_MS", 250),
+  askOwnerTimeoutMs: num("ASK_OWNER_TIMEOUT_MS", 60_000),
 
   llm: {
     baseUrl: env.LLM_BASE_URL || "",

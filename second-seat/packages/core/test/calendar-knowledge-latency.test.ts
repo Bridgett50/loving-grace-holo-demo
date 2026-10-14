@@ -72,6 +72,14 @@ describe("answers from the owner's notes", () => {
     expect(a.confident).toBe(false);
     expect(a.answer).toBe(persona.deferralPhrase);
   });
+
+  it("defers when a note only shares incidental words with the question", () => {
+    const notes: KnowledgeDoc[] = [
+      { id: "d3", twinId: "t", title: "Pilot notes", content: "The kiosk launch is March at the Atlanta site, then two more sites in April.", source: "note", createdAt: "" },
+    ];
+    const a = answerFromKnowledge("What does Grace think about hiring two more engineers in Q1?", notes, persona);
+    expect(a.confident).toBe(false);
+  });
 });
 
 describe("summary", () => {
@@ -82,7 +90,20 @@ describe("summary", () => {
     ]);
     expect(items[0]).toMatchObject({ owner: "Jordan", due: "Friday" });
     expect(items[0].text).toBe("Send the hardware quote");
-    expect(items[1].owner).toBe("Assignee (addressed)");
+    expect(items[1].owner).toBe("You");
+  });
+
+  it("assigns 'you' to the owner or the named person, and skips twin lines and binding requests", () => {
+    const items = extractActionItems(
+      [
+        { at: "", speaker: "Priya", text: "Can you share the voice sample checklist?", isTwin: false },
+        { at: "", speaker: "Maya", text: "Jordan, can you send the floor plan?", isTwin: false },
+        { at: "", speaker: "Pat", text: "Grace, can you agree to the revised contract terms today?", isTwin: false },
+        { at: "", speaker: "Grace (AI Twin)", text: "I'm checking with Grace and I'll come back to it.", isTwin: true },
+      ],
+      "Grace Lee",
+    );
+    expect(items.map((i) => i.owner)).toEqual(["Grace Lee", "Jordan"]);
   });
 
   it("keeps the flagged-for-owner list", () => {

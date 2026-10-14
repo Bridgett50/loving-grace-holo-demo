@@ -75,11 +75,19 @@ export interface GroundedAnswer {
 }
 
 export const MIN_CONFIDENT_SCORE = 1.2;
+/** Share of the question's key terms the best note must contain, so incidental word overlap ("two more") is not an answer. */
+export const MIN_QUERY_COVERAGE = 0.4;
+
+export function queryCoverage(question: string, chunk: Chunk): number {
+  const q = [...new Set(tokenize(question))];
+  if (!q.length) return 0;
+  return q.filter((t) => chunk.tokens.includes(t)).length / q.length;
+}
 
 /** Extractive answer (no LLM). Speaks the best-matching note, or defers. */
 export function answerFromKnowledge(question: string, docs: KnowledgeDoc[], persona: Pick<Persona, "deferralPhrase">): GroundedAnswer {
   const hits = search(question, docs, 2);
-  if (!hits.length || hits[0].score < MIN_CONFIDENT_SCORE) {
+  if (!hits.length || hits[0].score < MIN_CONFIDENT_SCORE || queryCoverage(question, hits[0].chunk) < MIN_QUERY_COVERAGE) {
     return { answer: persona.deferralPhrase, sources: [], confident: false };
   }
   const best = hits[0].chunk.text.replace(/\s+/g, " ");
