@@ -12,6 +12,8 @@ export class BotStore {
   private readonly live = new Map<string, SessionRunner>();
   private finished: Record<string, SessionView> = {};
   private wallets: Record<string, LedgerState> = {};
+  /** Payment references already credited, so a re-delivered payment notice never credits twice. */
+  private creditedRefs: Record<string, string> = {};
   private readonly ledgers = new Map<string, Ledger>();
   private readonly file: string;
 
@@ -19,9 +21,10 @@ export class BotStore {
     this.file = join(dir, "bot-store.json");
     if (persist) {
       try {
-        const raw = JSON.parse(readFileSync(this.file, "utf8")) as { finished: Record<string, SessionView>; wallets: Record<string, LedgerState> };
+        const raw = JSON.parse(readFileSync(this.file, "utf8")) as { finished: Record<string, SessionView>; wallets: Record<string, LedgerState>; creditedRefs?: Record<string, string> };
         this.finished = raw.finished ?? {};
         this.wallets = raw.wallets ?? {};
+        this.creditedRefs = raw.creditedRefs ?? {};
       } catch {
         /* first run */
       }
@@ -31,7 +34,7 @@ export class BotStore {
   private save() {
     if (!this.persist) return;
     mkdirSync(this.dir, { recursive: true });
-    writeFileSync(this.file, JSON.stringify({ finished: this.finished, wallets: this.wallets }, null, 2));
+    writeFileSync(this.file, JSON.stringify({ finished: this.finished, wallets: this.wallets, creditedRefs: this.creditedRefs }, null, 2));
   }
 
   ledger(ownerId: string): Ledger {
@@ -59,6 +62,14 @@ export class BotStore {
   topUp(ownerId: string, amountCents: number) {
     this.ledger(ownerId).topUp(amountCents, config.demoMode ? "demo_top_up" : "top_up");
     return this.wallet(ownerId);
+  }
+
+  /** Credit a completed card payment. Idempotent per payment reference. */
+  credit(ownerId: string, amountCents: number, ref: string): { credited: boolean; wallet: ReturnType<BotStore["wallet"]> } {
+    if (this.creditedRefs[ref]) return { credited: false, wallet: this.wallet(ownerId) };
+    this.creditedRefs[ref] = ownerId;
+    this.ledger(ownerId).topUp(amountCents, "card_payment");
+    return { credited: true, wallet: this.wallet(ownerId) };
   }
 
   async start(req: StartSessionRequest, deps: Partial<ConstructorParameters<typeof SessionRunner>[1]> = {}): Promise<SessionRunner> {

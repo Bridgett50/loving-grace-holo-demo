@@ -10,7 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { WalletCard } from "@/components/wallet-card";
 import { PASTEL_STAGE_CSS } from "@/lib/samples";
+import { bot } from "@/lib/server/bot";
 import { isDemoMode } from "@/lib/server/current-user";
+import { CREDIT_PACKS, getCheckout, paidCredit, paymentsEnabled } from "@/lib/server/stripe";
 import { loadBotData, loadOwner } from "@/lib/server/view-model";
 import { money } from "@/lib/types";
 import { BRAND } from "@/lib/brand";
@@ -85,10 +87,30 @@ function Landing({ demo }: { demo: boolean }) {
   );
 }
 
-export default async function Home() {
+type PaymentNotice = { tone: "ok" | "info" | "error"; text: string } | null;
+
+/** Backup for the webhook: credits a returning Checkout Session (idempotent, owner-checked). */
+async function confirmPayment(paid: string | undefined, uid: string): Promise<PaymentNotice> {
+  if (!paid) return null;
+  if (paid === "cancelled") return { tone: "info", text: "Checkout cancelled. You weren't charged." };
+  if (!paymentsEnabled() || !/^cs_[A-Za-z0-9_]+$/.test(paid)) return null;
+  try {
+    const session = await getCheckout(paid);
+    const credit = paidCredit(session);
+    if (!credit || credit.ownerId !== uid) return { tone: "info", text: "Your payment is still processing. Credit appears as soon as Stripe confirms it." };
+    await bot(`/v1/wallets/${uid}/credit`, { json: { amountCents: credit.cents, ref: session.id } });
+    return { tone: "ok", text: `Payment received: ${money(credit.cents)} added to your minutes wallet. Thank you!` };
+  } catch {
+    return { tone: "error", text: "We couldn't confirm your payment just now. If you were charged, the credit is applied automatically within a minute." };
+  }
+}
+
+export default async function Home({ searchParams }: { searchParams: Promise<{ paid?: string }> }) {
   const o = await loadOwner();
   if (!o.twin) return <Landing demo={isDemoMode} />;
+  const notice = await confirmPayment((await searchParams).paid, o.uid);
   const { wallet, sessions, error } = await loadBotData(o.uid);
+  const packs = paymentsEnabled() ? CREDIT_PACKS.map(({ id, label, minutes }) => ({ id, label, minutes })) : [];
   const live = sessions?.filter((s) => ["joining", "waiting_for_media", "live", "voice_only", "listen_only"].includes(s.state)) ?? [];
   const canRun = o.verified && o.consentActive;
 
@@ -107,6 +129,21 @@ export default async function Home() {
           </Button>
         )}
       </div>
+
+      {notice && (
+        <div
+          role="status"
+          className={
+            notice.tone === "ok"
+              ? "rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm"
+              : notice.tone === "error"
+                ? "rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm"
+                : "rounded-lg border bg-muted px-4 py-3 text-sm"
+          }
+        >
+          {notice.text}
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1.25fr_1fr]">
         <Card>
@@ -141,7 +178,7 @@ export default async function Home() {
             <CardHeader>
               <CardTitle className="text-base">Minutes wallet</CardTitle>
             </CardHeader>
-            <CardContent>{wallet ? <WalletCard wallet={wallet} demoMode={isDemoMode} /> : <p className="text-sm text-muted-foreground">{error}</p>}</CardContent>
+            <CardContent>{wallet ? <WalletCard wallet={wallet} demoMode={isDemoMode} packs={packs} /> : <p className="text-sm text-muted-foreground">{error}</p>}</CardContent>
           </Card>
         </div>
       </div>

@@ -25,7 +25,9 @@ import { bot, BotOfflineError } from "@/lib/server/bot";
 import { currentUserId, isDemoMode } from "@/lib/server/current-user";
 import { activeConsent, audit, newId, readDb, twinForOwner, updateDb, type Asset } from "@/lib/server/db";
 import { defaultRules, demoEvents, sampleKnowledge } from "@/lib/server/demo-seed";
+import { actionOrigin } from "@/lib/server/origin";
 import { launchSession } from "@/lib/server/sessions";
+import { CREDIT_PACKS, createCheckout, paymentsEnabled } from "@/lib/server/stripe";
 import { SAMPLE_OWNER } from "@/lib/samples";
 
 export type ActionResult<T = undefined> = { ok: true; data?: T } | { ok: false, error: string };
@@ -560,6 +562,26 @@ export async function topUp(amountCents: number): Promise<ActionResult> {
     await bot(`/v1/wallets/${uid}/topup`, { json: { amountCents } });
     revalidatePath("/", "layout");
     return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Starts a Stripe Checkout for a minutes pack and returns the hosted payment page URL. */
+export async function buyCredit(packId: string): Promise<ActionResult<{ url: string }>> {
+  try {
+    if (!paymentsEnabled()) throw new Error("Card payments aren't turned on for this site.");
+    const pack = CREDIT_PACKS.find((p) => p.id === packId);
+    if (!pack) throw new Error("Unknown credit pack.");
+    const uid = await currentUserId();
+    let url: string | null = null;
+    try {
+      url = (await createCheckout({ ownerId: uid, email: readDb().users[uid]?.email, pack, origin: await actionOrigin() })).url;
+    } catch (e) {
+      console.error("stripe_checkout_failed", e);
+    }
+    if (!url) throw new Error("Payments are temporarily unavailable. You weren't charged; please try again shortly.");
+    return { ok: true, data: { url } };
   } catch (e) {
     return fail(e);
   }

@@ -1,5 +1,5 @@
-# Render Blueprint for Second Seat (the app lives in second-seat/). New > Blueprint, then pick this repo.
-# One web service runs the website and the bot together, with a disk for demo data.
+# Render Blueprint for Second Seat (the app lives in second-seat/). One web service runs the website and the bot together, with a disk for demo data.
+# New > Blueprint in the Render dashboard, then point it at this repository.
 services:
   - type: web
     name: second-seat
@@ -28,6 +28,15 @@ services:
         value: "false"
       # Set to your Render URL (for example https://second-seat.onrender.com) before turning on OAuth connections.
       - key: APP_URL
+        sync: false
+      # Real AI answers and summaries (OpenAI or any OpenAI-compatible API). Leave the key blank for notes-only answers.
+      - key: LLM_BASE_URL
+        value: https://api.openai.com/v1
+      - key: LLM_API_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
         sync: false
       - key: NEXT_PUBLIC_PRODUCT_NAME
         value: Second Seat

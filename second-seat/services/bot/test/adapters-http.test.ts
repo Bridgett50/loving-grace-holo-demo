@@ -53,4 +53,19 @@ describe("HTTP API", () => {
     const res = await app.request("/v1/wallets/owner_1/topup", { method: "POST", headers: auth, body: JSON.stringify({ amountCents: 10_000_000 }) });
     expect(res.status).toBe(400);
   });
+
+  it("credits a card payment exactly once, even when the payment notice is re-delivered", async () => {
+    const pay = () => app.request("/v1/wallets/owner_pay/credit", { method: "POST", headers: auth, body: JSON.stringify({ amountCents: 2500, ref: "cs_test_abc12345" }) });
+    const before = (await (await app.request("/v1/wallets/owner_pay", { headers: auth })).json()) as { balanceCents: number };
+    const first = (await (await pay()).json()) as { credited: boolean; wallet: { balanceCents: number } };
+    const again = (await (await pay()).json()) as { credited: boolean; wallet: { balanceCents: number } };
+    expect(first.credited).toBe(true);
+    expect(again.credited).toBe(false);
+    expect(again.wallet.balanceCents).toBe(before.balanceCents + 2500);
+  });
+
+  it("rejects malformed payment credits", async () => {
+    const res = await app.request("/v1/wallets/owner_pay/credit", { method: "POST", headers: auth, body: JSON.stringify({ amountCents: 2500, ref: "x" }) });
+    expect(res.status).toBe(400);
+  });
 });

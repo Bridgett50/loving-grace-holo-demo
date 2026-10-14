@@ -44,6 +44,13 @@ export function createApp(store = new BotStore()) {
     return c.json(store.topUp(c.req.param("ownerId"), amountCents));
   });
 
+  app.post("/v1/wallets/:ownerId/credit", async (c) => {
+    const { amountCents, ref } = await c.req.json<{ amountCents: number; ref: string }>();
+    if (!Number.isInteger(amountCents) || amountCents <= 0 || amountCents > 1000_00) return c.json({ error: "Invalid amount" }, 400);
+    if (typeof ref !== "string" || !/^[A-Za-z0-9_]{8,255}$/.test(ref)) return c.json({ error: "Invalid payment reference" }, 400);
+    return c.json(store.credit(c.req.param("ownerId"), amountCents, ref));
+  });
+
   app.post("/v1/sessions", async (c) => {
     const req = await c.req.json<StartSessionRequest>();
     if (!req?.twin?.id || !req.actorId || !req.meeting) return c.json({ error: "Invalid session request" }, 400);

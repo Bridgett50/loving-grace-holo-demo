@@ -29,6 +29,22 @@ On Railway or Fly, attach a volume at `/data`. The platform sets `PORT` and the 
 
 The product name lives in `apps/web/src/lib/brand.ts`, and you can override it with `NEXT_PUBLIC_PRODUCT_NAME` and `NEXT_PUBLIC_COMPANY_NAME`. These values are compiled into the website, so redeploy (rebuild) after changing them. On Render, set them as environment variables; they're passed to the Docker build automatically.
 
+## Card payments (Stripe)
+
+Customers buy minutes packs ($10, $25 or $50) on Stripe's hosted checkout, and the credit lands in their minutes wallet. Card details never touch this app.
+
+1. In Stripe (start in **test mode**), go to Developers → API keys and copy the secret key into `STRIPE_SECRET_KEY`.
+2. Go to Developers → Webhooks → **Add endpoint**:
+   - URL: `https://<your-domain>/api/stripe/webhook`
+   - Events: `checkout.session.completed` and `checkout.session.async_payment_succeeded`
+
+   Copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
+3. Redeploy. The **Add minutes** buttons appear in the wallet.
+
+Each payment is credited exactly once. The webhook credits it, and the customer's return to the site is a backup if the webhook is late. Both are keyed to the Checkout Session id. The webhook rejects forged, stale, unpaid or amount-mismatched events.
+
+Payments stay off while `PUBLIC_DEMO=true`, because visitor wallets there are sandboxes. **Don't switch to live keys until sign-in exists.** Without it, `DEMO_MODE=false` means every visitor shares one owner account.
+
 ## Production (real owners, real meetings)
 
 Switching off demo mode turns this into the real product. It needs these first (details in [PLATFORM_APPROVALS.md](PLATFORM_APPROVALS.md)):
