@@ -140,21 +140,50 @@ if (STRIPE_SECRET_KEY) {
   } else log("Stripe webhook already exists:", hookUrl);
 }
 
-// 4. Deploy and wait
-const deploy = await render(`/services/${service.id}/deploys`, { method: "POST", body: { clearCache: "do_not_clear" } });
-log("Deploy started:", deploy.id);
+// 4. Deploy and wait. Creating a service already starts a deploy, and a second trigger
+// while one is running returns 202 with an empty body (overlapping policy: wait).
+const ACTIVE = new Set(["created", "queued", "build_in_progress", "update_in_progress", "pre_deploy_in_progress"]);
+const FAILED = new Set(["build_failed", "update_failed", "canceled", "deactivated", "pre_deploy_failed"]);
+const listDeploys = async () => (await render(`/services/${service.id}/deploys?limit=20`)).map((row) => row.deploy ?? row);
+
+const before = await listDeploys();
+const already = before.find((d) => ACTIVE.has(d.status));
+let deployId = already?.id;
+if (already) {
+  log("Deploy already in progress:", deployId, already.status);
+} else {
+  const started = await render(`/services/${service.id}/deploys`, { method: "POST", body: { clearCache: "do_not_clear" } });
+  deployId = started?.id ?? started?.deploy?.id ?? null;
+  if (!deployId) {
+    const fresh = (await listDeploys()).find((d) => !before.some((b) => b.id === d.id));
+    deployId = fresh?.id ?? null;
+  }
+  log("Deploy started:", deployId ?? "(queued)");
+}
+
+let live = false;
 for (let i = 0; i < 120; i++) {
-  const d = await render(`/services/${service.id}/deploys/${deploy.id}`);
-  if (d.status === "live") {
+  const deploys = await listDeploys();
+  const active = deploys.find((d) => ACTIVE.has(d.status));
+  if (!deployId && active) deployId = active.id;
+  if (active) {
+    if (i % 4 === 0) log("…", active.status);
+    await sleep(15_000);
+    continue;
+  }
+  const latest = (deployId && deploys.find((d) => d.id === deployId)) || deploys[0];
+  if (latest?.status === "live") {
     log("Deploy is live.");
+    live = true;
     break;
   }
-  if (["build_failed", "update_failed", "canceled", "deactivated", "pre_deploy_failed"].includes(d.status)) {
-    throw new Error(`Deploy ${d.status}. Check logs: https://dashboard.render.com/web/${service.id}/deploys/${deploy.id}`);
+  if (latest && FAILED.has(latest.status)) {
+    throw new Error(`Deploy ${latest.status}. Check logs: https://dashboard.render.com/web/${service.id}/deploys/${latest.id}`);
   }
-  if (i % 4 === 0) log("…", d.status);
+  if (i % 4 === 0) log("…", latest?.status ?? "pending");
   await sleep(15_000);
 }
+if (!live) throw new Error(`Deploy timed out. Check logs: https://dashboard.render.com/web/${service.id}`);
 const health = await fetch(`${onRender}/api/health`).then((r) => r.json()).catch((e) => ({ error: String(e) }));
 log("Health:", JSON.stringify(health));
 
