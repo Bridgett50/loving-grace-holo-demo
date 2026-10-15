@@ -142,39 +142,39 @@
   30% { transform: translateY(-1.5px) scale(1.006) rotate(-0.25deg); }
   65% { transform: translateY(0.5px) scale(1.003) rotate(0.3deg); }
 }
+/* Talk motion is a slow drift only. Scaling the whole portrait reads as a pulse and makes people dizzy. */
 @keyframes twin-talk {
-  0%, 100% { transform: translateY(0) scale(1.004); }
-  50% { transform: translateY(-1px) scale(1.012); }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-0.5px); }
 }
 @keyframes twin-blink {
   0%, 92%, 100% { transform: scaleY(1); }
   95% { transform: scaleY(0.08); }
 }
 @keyframes twin-mouth {
-  0%, 100% { transform: scaleY(0.35); }
-  25% { transform: scaleY(1); }
-  50% { transform: scaleY(0.55); }
-  75% { transform: scaleY(0.9); }
+  0%, 100% { transform: scaleY(0.55); }
+  50% { transform: scaleY(0.8); }
 }
 @keyframes holo-glow {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 0.9; }
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 0.85; }
 }
 .twin-breathe { animation: twin-breathe 6s ease-in-out infinite; transform-origin: 50% 85%; }
-.twin-talk { animation: twin-talk 0.45s ease-in-out infinite; transform-origin: 50% 85%; }
+.twin-talk { animation: twin-talk 4.8s ease-in-out infinite; transform-origin: 50% 85%; }
 .twin-blink { animation: twin-blink 4.5s infinite; transform-origin: center; transform-box: fill-box; }
-.twin-mouth-talk { animation: twin-mouth 0.32s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
-.holo-glow { animation: holo-glow 2.4s ease-in-out infinite; }
+.twin-mouth-talk { animation: twin-mouth 2.2s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+.holo-glow { animation: holo-glow 8s ease-in-out infinite; }
 @keyframes twin-bar {
-  0%, 100% { height: 4px; }
-  50% { height: 18px; }
+  0%, 100% { height: 6px; }
+  50% { height: 12px; }
 }
-.twin-bar { height: 4px; animation: twin-bar 0.6s ease-in-out infinite; }
+.twin-bar { height: 6px; animation: twin-bar 1.6s ease-in-out infinite; }
+/* One brief open per cycle. A full-face swap faster than about once a second flickers. */
 @keyframes twin-lipflap {
-  0%, 18%, 52%, 70%, 100% { opacity: 0; }
-  24%, 44%, 76%, 92% { opacity: 1; }
+  0%, 72%, 100% { opacity: 0; }
+  78%, 90% { opacity: 1; }
 }
-.twin-lipflap { animation: twin-lipflap 0.9s linear infinite; }
+.twin-lipflap { animation: twin-lipflap 2.6s linear infinite; }
 @media (prefers-reduced-motion: reduce) {
   .twin-breathe, .twin-talk, .twin-blink, .twin-mouth-talk, .holo-glow, .twin-bar, .twin-lipflap { animation: none; }
 }
