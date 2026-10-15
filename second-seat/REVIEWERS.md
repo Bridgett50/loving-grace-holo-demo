@@ -1,0 +1,58 @@
+# Second Seat — Reviewer Guide
+
+**Second Seat** by **Loving Grace Technologies, LLC** is an AI meeting twin for Google Meet, Zoom, and Microsoft Teams: it takes your seat in a meeting you cannot attend — under your name, with mandatory disclosure that it is an AI — and produces a cited brief afterward.
+
+**Live demo:** https://app.lovinggracetechnologies.com
+**Status:** MVP running end-to-end in **demo mode** (scripted demonstration, no paid API keys, no production integrations). This guide states plainly what is built, what is specified, and what is not yet real — the same framing used in the Meta Global AI Developer Hackathon application (Startup Track).
+
+## The 3-minute path
+
+1. **Run the live demo** (link above) — the scripted meeting shows the intended loop: join, disclose, relay, brief.
+2. **Read the safeguard core** — [`packages/core`](packages/core): dependency-free TypeScript holding the session guard, contract & payment guardrails, disclosure, ownership and consent, the billing ledger, knowledge retrieval, and meeting summaries. Its unit tests live in [`packages/core/test`](packages/core/test) (Vitest).
+3. **Skim the architecture** — [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+4. **Check the honest platform status** — [`docs/PLATFORM_APPROVALS.md`](docs/PLATFORM_APPROVALS.md): the Google Meet bot path is a policy gray area, Zoom requires Marketplace review, Teams calling is voice-only today. We document the walls instead of hiding them.
+
+## Architecture in one paragraph
+
+`apps/web` is a Next.js 16 / TypeScript app (onboarding, twin profile, calendar rules, the live session console with coach and takeover modes). `services/bot` is the meeting bot service (Hono) with the session runner and platform adapters (demo, Google Meet browser bot with a Vexa fallback, Zoom Meeting SDK, Teams Graph calling) plus voice, avatar, and answer providers. `packages/core` is the shared, dependency-free logic both sides call — deliberately framework-free so the safety rules can be unit-tested in isolation.
+
+## The safety design (the point of the product)
+
+The parts that must never fail are **not** delegated to a language model:
+
+- **Mandatory disclosure** — the twin always tells the room it is an AI.
+- **Owner-only operation** — the twin runs only for its verified owner.
+- **Hard refusals** — it can never agree to contracts or payments.
+
+These are enforced in deterministic TypeScript in `packages/core`, with unit tests. The model handles language; it is never trusted with the rules. The failure-mode choreography around those rules (watchdogs, refusal logging) is designed and documented; it is not yet verified in live conditions.
+
+## Status — what is real today
+
+| Area | Status |
+| --- | --- |
+| End-to-end demo (scripted meeting) | **Built, deployed, publicly demonstrable** |
+| Deterministic safeguard core + unit tests | **Built** (`packages/core`, `packages/core/test`) |
+| Architecture / setup / deploy / approvals docs | **Written** (`docs/`) |
+| Live owner relay ("ask me, live"), coach & takeover | **Specified; gated** behind twin creation — not yet exercisable live |
+| Cited search across past meetings | **Specified; gated** — coded to spec, not yet verified on the live deploy |
+| In-meeting disclosure in a real meeting | **Specified** — not yet verifiable in a live third-party meeting |
+| Production platform integrations (Meet / Zoom / Teams) | **Not yet** — approvals pending; see `docs/PLATFORM_APPROVALS.md` |
+| Production model access | **Not yet** — demo mode runs with no paid API keys by design |
+
+An independent SME engineering audit of this repository (Oct 15, 2026) graded the product "a functional, safety-serious demo of a real product — deployed exactly as its own documentation describes." The audit report is available from the founder on request.
+
+## The hackathon build (Meta Global AI Developer Hackathon)
+
+The extension proposed for the hackathon supplies the layer demo mode deliberately omits:
+
+1. **Reasoning on Muse Spark** (Meta Model API) — the twin's dialogue, summarization, and follow-through modules move from scripted demo responses to a frontier model.
+2. **Eyes from SAM 3.1** — segment and interpret shared screens (slides, documents, whiteboards) so briefs cite what was *shown*, not only what was said.
+3. **Visual briefs with Muse Image** — a one-page visual recap (decisions, owners, deadlines) beside the written brief.
+
+The safeguard core stays deterministic and model-independent — upgrading the model never weakens the safety behavior.
+
+## About the builder
+
+Loving Grace Technologies, LLC (Grenada, Mississippi) is a SAM.gov-registered AI research and product company (UEI U5D5QT7QLRQ5 · CAGE 222V5), founded by Bridget Sander, who brings 10+ years in complex property claims — multimillion-dollar losses, estimating, and negotiation — to building agent systems that can be trusted in rooms where words become commitments.
+
+**Contact:** https://www.linkedin.com/in/bridgetsander · https://lovinggracetechnologies.com

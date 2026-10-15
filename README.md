@@ -3,6 +3,12 @@
 
 **Live:** https://bridgett50.github.io/loving-grace-holo-demo/
 
+## Also in this repo — Second Seat (AI meeting twin)
+
+**[Second Seat](second-seat/)** is Loving Grace Technologies' AI meeting twin for Google Meet, Zoom, and Microsoft Teams — live in demo mode at [app.lovinggracetechnologies.com](https://app.lovinggracetechnologies.com). **Reviewers (Meta Global AI Developer Hackathon): start with [second-seat/REVIEWERS.md](second-seat/REVIEWERS.md)** — the 3-minute path: live demo, the deterministic safeguard core, the architecture, and an honest status table.
+
+---
+
 A concert-style "Pepper's Ghost" hologram in the browser. Open the link, tap **Tap to appear** once (browsers need one tap to allow the camera), and you appear as clean, live video of yourself on pure black, full screen. No menus, settings or codes.
 
 ## What it does

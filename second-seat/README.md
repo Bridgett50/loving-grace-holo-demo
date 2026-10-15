@@ -1,5 +1,7 @@
 # Second Seat by Loving Grace
 
+> **Reviewers:** see [REVIEWERS.md](REVIEWERS.md) for the 3-minute guided path — live demo, safeguard core, architecture, and an honest status table.
+
 An AI meeting twin that takes your seat when you can't be there. You scan your face and record a short voice sample once. Your verified twin can then join Google Meet, Zoom and Teams with your likeness and cloned voice. It answers from your notes and posts a transcript, notes and action items afterwards. It always tells the room it is an AI, and it can never agree to contracts or payments.
 
 This repo is the MVP. It runs end to end in **demo mode** with no paid API keys.
