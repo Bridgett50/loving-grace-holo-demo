@@ -179,7 +179,7 @@ export function LiveSession(props: { id: string; look: "realistic" | "stylized";
                 badge={view.takeover ? `${props.ownerFirstName} (live) · twin paused` : props.badge}
                 speaking={speaking && !view.takeover && isLive}
                 recording={!view.transcriptionPaused && isLive}
-                className={cn(!isLive && "opacity-60 grayscale-[40%]", view.state === "waiting_for_media" && "animate-pulse")}
+                className={cn(!isLive && "opacity-60 grayscale-[40%]")}
               />
             ) : (
               <div className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-xl bg-[radial-gradient(ellipse_at_50%_40%,#2a2f4a,#07080d_70%)] text-white">

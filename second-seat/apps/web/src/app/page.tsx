@@ -56,7 +56,7 @@ function Landing({ demo }: { demo: boolean }) {
           </div>
           {demo && <p className="text-sm text-muted-foreground">Demo mode: &ldquo;Watch a live demo&rdquo; skips the scan with a sample stylized twin and opens a scripted meeting.</p>}
         </div>
-        <TwinStage look="stylized" backgroundCss={PASTEL_STAGE_CSS} badge="AI Twin of Bridgett" speaking className="shadow-2xl ring-1 ring-black/10" />
+        <TwinStage look="stylized" backgroundCss={PASTEL_STAGE_CSS} badge="AI Twin of Bridgett" className="shadow-2xl ring-1 ring-black/10" />
       </section>
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {features.map(({ icon: Icon, title, body }) => (

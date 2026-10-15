@@ -1,47 +1,30 @@
 /* eslint-disable @next/next/no-img-element */
-import { SAMPLE_REALISTIC_SRC, SAMPLE_STYLIZED_SRC, SAMPLE_STYLIZED_TALK_SRC } from "@/lib/samples";
+import { SAMPLE_REALISTIC_SRC, SAMPLE_STYLIZED_SRC } from "@/lib/samples";
 import { cn } from "@/lib/utils";
 
 /**
  * Preview renderers. In production the meeting video comes from the avatar worker (LivePortrait +
- * MuseTalk for realistic, a rigged stylized character for stylized); these previews use the same
- * reference frame and look so the owner sees what attendees will see.
+ * MuseTalk for realistic, a rigged stylized character for stylized). Until that worker is connected,
+ * the preview is a still frame. It does not bob, pulse, or fake a mouth.
  */
 
-
-function SpeakingBars() {
-  return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-[8%] flex items-end justify-center gap-1" aria-hidden>
-      {[0, 1, 2, 3, 4].map((i) => (
-        <span key={i} className="twin-bar w-1 rounded-full bg-white/80" style={{ animationDelay: `${i * 0.11}s` }} />
-      ))}
-    </div>
-  );
-}
-
-/**
- * Concert-hologram treatment: the person is feathered out of a black frame (no hard rectangle), with a
- * soft cool rim glow and gentle idle motion, so it reads as real video rather than a 3D mesh.
- */
-function HoloPortrait({ src, talkSrc, alt, speaking, className }: { src: string; talkSrc?: string; alt: string; speaking?: boolean; className?: string }) {
+function HoloPortrait({ src, alt, className }: { src: string; alt: string; className?: string }) {
   return (
     <div className={cn("relative h-full w-full", className)}>
-      <div className={cn("absolute inset-0 [mask-image:radial-gradient(ellipse_62%_78%_at_50%_42%,black_62%,transparent_100%)]", speaking ? "twin-talk" : "twin-breathe")}>
+      <div className="absolute inset-0 [mask-image:radial-gradient(ellipse_62%_78%_at_50%_42%,black_62%,transparent_100%)]">
         <img src={src} alt={alt} className="h-full w-full object-cover object-[50%_22%]" draggable={false} />
-        {talkSrc && <img src={talkSrc} alt="" aria-hidden className={cn("absolute inset-0 h-full w-full object-cover object-[50%_22%] opacity-0", speaking && "twin-lipflap")} draggable={false} />}
       </div>
-      <div className="holo-glow pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_70%_at_50%_40%,transparent_60%,rgba(170,205,255,0.10)_75%,transparent_90%)]" />
-      {speaking && <SpeakingBars />}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_70%_at_50%_40%,transparent_60%,rgba(170,205,255,0.10)_75%,transparent_90%)]" />
     </div>
   );
 }
 
-export function RealisticAvatar({ src, speaking, className }: { src?: string; speaking?: boolean; className?: string }) {
-  return <HoloPortrait src={src || SAMPLE_REALISTIC_SRC} alt="Realistic twin" speaking={speaking} className={className} />;
+export function RealisticAvatar({ src, className }: { src?: string; speaking?: boolean; className?: string }) {
+  return <HoloPortrait src={src || SAMPLE_REALISTIC_SRC} alt="Realistic twin" className={className} />;
 }
 
-export function StylizedAvatar({ src, speaking, className }: { src?: string; speaking?: boolean; className?: string }) {
-  return <HoloPortrait src={src || SAMPLE_STYLIZED_SRC} talkSrc={src ? undefined : SAMPLE_STYLIZED_TALK_SRC} alt="Stylized 3D twin" speaking={speaking} className={className} />;
+export function StylizedAvatar({ src, className }: { src?: string; speaking?: boolean; className?: string }) {
+  return <HoloPortrait src={src || SAMPLE_STYLIZED_SRC} alt="Stylized 3D twin" className={className} />;
 }
 
 export function TwinStage({
@@ -50,7 +33,6 @@ export function TwinStage({
   stylizedSrc,
   backgroundCss,
   badge,
-  speaking,
   recording = true,
   state,
   className,
@@ -71,7 +53,7 @@ export function TwinStage({
   return (
     <div className={cn("relative aspect-video w-full overflow-hidden rounded-xl bg-black", className)} style={{ background: backgroundCss }}>
       <div className="absolute inset-y-0 left-1/2 aspect-[3/4] h-full -translate-x-1/2">
-        {look === "realistic" ? <RealisticAvatar src={imageSrc} speaking={speaking} /> : <StylizedAvatar src={stylizedSrc} speaking={speaking} />}
+        {look === "realistic" ? <RealisticAvatar src={imageSrc} /> : <StylizedAvatar src={stylizedSrc} />}
       </div>
       <div className="absolute left-3 top-3 flex items-center gap-2 rounded-md bg-black/70 px-2.5 py-1 text-xs font-semibold text-white sm:text-sm">
         <span className="inline-block size-2 rounded-full bg-fuchsia-400" />
