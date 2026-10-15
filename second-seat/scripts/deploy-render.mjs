@@ -58,8 +58,15 @@ async function stripe(path, form) {
 // 1. Workspace
 const owners = (await render("/owners?limit=100")).map((o) => o.owner);
 log("Workspaces:", owners.map((o) => `${o.name} (${o.id})`).join(", "));
-const owner = OWNER ? owners.find((o) => o.name === OWNER || o.id === OWNER) : owners.length === 1 ? owners[0] : null;
+// Apostrophes in workspace names vary ("MoJa's" vs "Mo'Ja's"). Match the id, the exact name, then a folded name.
+const foldOwner = (s) => s.normalize("NFKC").toLowerCase().replace(/['’‘`]/g, "").replace(/\s+/g, " ").trim();
+const owner = OWNER
+  ? owners.find((o) => o.id === OWNER || o.name === OWNER) ?? owners.find((o) => foldOwner(o.name) === foldOwner(OWNER))
+  : owners.length === 1
+    ? owners[0]
+    : null;
 if (!owner) throw new Error(`Pick a workspace with --owner. Found: ${owners.map((o) => o.name).join(", ")}`);
+log("Workspace:", owner.name);
 
 // 2. Service (+ disk)
 const existing = (await render(`/services?name=${encodeURIComponent(NAME)}&ownerId=${owner.id}&limit=20`)).map((s) => s.service);
