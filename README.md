@@ -24,7 +24,7 @@ A concert-style "Pepper's Ghost" hologram in the browser. Open the link, tap **T
 URL options (for testing): `?stage` (start in stage mode), `?glow`, `?model=selfie|multiclass`, `?delegate=cpu`, `?debug` (PeerJS logs).
 
 ## Second Seat (AI meeting twin MVP)
-[`second-seat/`](second-seat/) holds **Second Seat by Loving Grace**: a Next.js web app plus a meeting bot service for a clearly labeled AI meeting twin. It joins Google Meet, Zoom and Teams. It runs in demo mode with no paid keys:
+[`second-seat/`](second-seat/) holds **Second Seat by Loving Grace**: a Next.js web app plus a meeting bot service for a clearly labeled AI meeting twin. It is designed to join Google Meet, Zoom and Teams; today it runs in demo mode with no paid keys:
 
 ```
 cd second-seat && pnpm install && pnpm dev   # http://localhost:4310
