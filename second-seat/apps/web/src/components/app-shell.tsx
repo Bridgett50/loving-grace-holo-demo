@@ -64,7 +64,7 @@ export function AppShell({ children, demoMode, botOnline }: { children: React.Re
             )}
             <Badge variant="outline" className="gap-1.5" title={botOnline ? "Bot service connected" : "Bot service offline"}>
               <span className={cn("size-2 rounded-full", botOnline ? "bg-success" : "bg-destructive")} />
-              <span className="hidden sm:inline">{botOnline ? "Bot online" : "Bot offline"}</span>
+              <span className="hidden sm:inline">{botOnline ? "Demo live" : "Demo offline"}</span>
             </Badge>
             <Sheet>
               <SheetTrigger asChild>
@@ -93,7 +93,7 @@ export function AppShell({ children, demoMode, botOnline }: { children: React.Re
       )}
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">{children}</main>
       <footer className="border-t py-6 text-center text-xs text-muted-foreground">
-        {BRAND.name} always discloses that it is an AI twin, never agrees to contracts or payments, and only runs for its verified owner.
+        {BRAND.name} always discloses that it is an AI twin. Contract and payment capabilities are forbidden in its code, and it only runs for its verified owner.
       </footer>
     </div>
   );
