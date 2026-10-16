@@ -38,6 +38,8 @@ These are enforced in deterministic TypeScript in `packages/core`, with unit tes
 | In-meeting disclosure in a real meeting | **Specified** — not yet verifiable in a live third-party meeting |
 | Production platform integrations (Meet / Zoom / Teams) | **Not yet** — approvals pending; see `docs/PLATFORM_APPROVALS.md` |
 | Production model access | **Not yet** — demo mode runs with no paid API keys by design |
+| Meta Model API evidence run | **Done (Oct 15, 2026)** — Muse Spark brief from the demo transcript + mechanical citation check (7/7 entries pass), committed under `hackathon-evidence/` |
+| Core test suite | **81 tests, all passing (run Oct 15, 2026)** — `pnpm --filter @second-seat/core test` |
 
 An SME engineering audit of this repository (Oct 15, 2026), run by a separate AI-agent review team under the founder's direction, graded the product "a functional, safety-serious demo of a real product — deployed exactly as its own documentation describes." The audit report is committed at `second-seat/Second-Seat-SME-Audit-Report.md`.
 
