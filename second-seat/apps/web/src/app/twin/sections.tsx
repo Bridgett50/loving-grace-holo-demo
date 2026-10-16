@@ -153,7 +153,7 @@ export function PersonaForm({ persona }: { persona: Persona }) {
         <Label htmlFor="deferral">When it doesn&apos;t know, it says</Label>
         <Textarea id="deferral" value={deferral} onChange={(e) => setDeferral(e.target.value)} rows={2} />
       </div>
-      <p className="text-xs text-muted-foreground">Always on, can&apos;t be turned off: never agrees to contracts, payments, prices or signatures; always says it&apos;s an AI twin.</p>
+      <p className="text-xs text-muted-foreground">Always on, can&apos;t be turned off: contract, payment, price and signature capabilities are forbidden in code; commitment asks are refused and flagged for the owner; always says it&apos;s an AI twin.</p>
       <Button type="submit" disabled={pending}>
         {pending && <Loader2 className="animate-spin" />} Save
       </Button>
