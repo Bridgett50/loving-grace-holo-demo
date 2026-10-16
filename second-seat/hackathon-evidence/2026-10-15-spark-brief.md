@@ -1,1 +1,42 @@
-IyBFdmlkZW5jZSBydW4g4oCUIE11c2UgU3BhcmsgYnJpZWYgZnJvbSB0aGUgZGVtbyB0cmFuc2NyaXB0CioqRGF0ZToqKiBPY3RvYmVyIDE1LCAyMDI2IMK3ICoqTW9kZWw6KiogbXVzZS1zcGFyay0xLjMgKHJlc3BvbnNlLXJlcG9ydGVkKSDCtyAqKkVuZHBvaW50OioqIGFwaS5tZXRhLmFpL3YxL2NoYXQvY29tcGxldGlvbnMgKE1ldGEgTW9kZWwgQVBJKQoqKlB1cnBvc2U6KiogUHJlLXN1Ym1pc3Npb24gdmVyaWZpY2F0aW9uIGZvciB0aGUgTWV0YSBHbG9iYWwgQUkgRGV2ZWxvcGVyIEhhY2thdGhvbiBhcHBsaWNhdGlvbi4gVGhlIGFwcGxpY2F0aW9uJ3MgUTYgcHJvcG9zZXMgYW4gZXZpZGVuY2UtbGlua2VkIG1lZXRpbmcgYnJpZWY7IHRoaXMgZmlsZSBwcm92ZXMgdGhlIGNvcmUgY2FsbCB3b3JrcyB0b2RheSwgb24gdGhlIHByb2R1Y3QncyBvd24gbWF0ZXJpYWwuCgoqKklucHV0OioqIFNlY29uZCBTZWF0J3MgYnVpbHQtaW4gZGVtbyBtZWV0aW5nLCB2ZXJiYXRpbSBmcm9tIHRoZSByZXBvJ3MgZGVtbyBhZGFwdGVyIChzZWNvbmQtc2VhdC9zZXJ2aWNlcy9ib3Qvc3JjL2FkYXB0ZXJzL2RlbW8udHMpLCB3aXRoIGN1bXVsYXRpdmUgdGltZXN0YW1wcyBmcm9tIHRoZSBzY3JpcHQncyBsaW5lIHRpbWluZ3MuIFNwZWFrZXJzOiBNYXlhIChob3N0KSwgSm9yZGFuLCBQYXQgKHZlbmRvciksIFByaXlhOyB0aGUgdHdpbiBhdHRlbmRzIGZvciBvd25lciBCcmlkZ2V0IFNhbmRlci4KCmBgYApbMDA6MDRdIE1heWEgKGhvc3QpOiBUaGFua3MgZm9yIGpvaW5pbmcsIGV2ZXJ5b25lLiBRdWljayBjaGVjay1pbiBvbiB0aGUgSG9sbyBMYWIgcGlsb3QuClswMDoxMV0gTWF5YSAoaG9zdCk6IEJyaWRnZXQsIHdoZXJlIGFyZSB3ZSBvbiB0aGUga2lvc2sgbGF1bmNoIHRpbWVsaW5lPwpbMDA6MjBdIEpvcmRhbjogSSdsbCBzZW5kIHRoZSB1cGRhdGVkIGhhcmR3YXJlIGJ1ZGdldCBieSBGcmlkYXkuClswMDoyOF0gUGF0ICh2ZW5kb3IpOiBCcmlkZ2V0LCBjYW4geW91IGFncmVlIHRvIHRoZSByZXZpc2VkIGNvbnRyYWN0IHRlcm1zIHRvZGF5IHNvIHdlIGNhbiBsb2NrIHRoZSBwcmljZT8KWzAwOjM3XSBQcml5YTogQ2FuIHlvdSBzaGFyZSB0aGUgdm9pY2Ugc2FtcGxlIGNoZWNrbGlzdCB3aXRoIHRoZSB0ZWFtPwpbMDA6NDVdIE1heWEgKGhvc3QpOiBUd2luLCB3aG8gaXMgbGVhZGluZyB0aGUgdm9pY2UgcGlwZWxpbmUgd29yaz8KWzAwOjUzXSBQYXQgKHZlbmRvcik6IFdoYXQgZG9lcyBCcmlkZ2V0IHRoaW5rIGFib3V0IGhpcmluZyB0d28gbW9yZSBlbmdpbmVlcnMgaW4gUTE/ClswMDo1OV0gTWF5YSAoaG9zdCk6IE5vIHJ1c2gsIGxldCdzIGtlZXAgZ29pbmcgd2hpbGUgd2Ugd2FpdCBvbiB0aGF0LgpbMDE6MTldIE1heWEgKGhvc3QpOiBXZSBkZWNpZGVkIHRvIG1vdmUgdGhlIGRlc2lnbiByZXZpZXcgdG8gbmV4dCBUdWVzZGF5LgpbMDE6MjhdIE1heWEgKGhvc3QpOiBUaGF0J3MgZXZlcnl0aGluZyBmb3IgdG9kYXkuIFRoYW5rcywgYWxsLgpgYGAKCioqSW5zdHJ1Y3Rpb25zIGdpdmVuIHRvIHRoZSBtb2RlbCAoc3VtbWFyeSk6KiogcHJvZHVjZSBhbiBldmlkZW5jZS1saW5rZWQgYnJpZWYgaW4gZm91ciBzZWN0aW9ucyAoRGVjaXNpb25zOyBBY3Rpb24gaXRlbXM7IFVucmVzb2x2ZWQgcXVlc3Rpb25zOyBSZXF1aXJlcyBvd25lciByZXZpZXcpOyBldmVyeSBmYWN0dWFsIGVudHJ5IG11c3QgZW5kIHdpdGggaXRzIHN1cHBvcnRpbmcgdHJhbnNjcmlwdCB0aW1lc3RhbXA7IGNvbW1pdG1lbnRzLCBjb250cmFjdCB0ZXJtcywgcGF5bWVudHMsIGFuZCBoaXJpbmcgZGVjaXNpb25zIGFyZSBuZXZlciBkZWNpZGVkIGJ5IHRoZSB0d2luIGFuZCBiZWxvbmcgdW5kZXIgIlJlcXVpcmVzIG93bmVyIHJldmlldyI7IGRvIG5vdCBpbnZlbnQgbmFtZXMsIGRhdGVzLCBmaWd1cmVzLCBvciBvdXRjb21lcy4KCiMjIE91dHB1dCDigJQgdGhlIG1vZGVsJ3MgYnJpZWYsIHZlcmJhdGltCgpEZWNpc2lvbnMKLSBNb3ZlIHRoZSBkZXNpZ24gcmV2aWV3IHRvIG5leHQgVHVlc2RheSBbMDE6MTldCgpBY3Rpb24gaXRlbXMKLSBKb3JkYW4gdG8gc2VuZCB0aGUgdXBkYXRlZCBoYXJkd2FyZSBidWRnZXQgYnkgRnJpZGF5IFswMDoyMF0KLSBTaGFyZSB0aGUgdm9pY2Ugc2FtcGxlIGNoZWNrbGlzdCB3aXRoIHRoZSB0ZWFtIFswMDozN10KClVucmVzb2x2ZWQgcXVlc3Rpb25zCi0gV2hlcmUgYXJlIHdlIG9uIHRoZSBraW9zayBsYXVuY2ggdGltZWxpbmUsIGFza2VkIGJ5IE1heWEgdG8gQnJpZGdldCBbMDA6MTFdCi0gV2hvIGlzIGxlYWRpbmcgdGhlIHZvaWNlIHBpcGVsaW5lIHdvcmssIGFza2VkIGJ5IE1heWEgdG8gVHdpbiBbMDA6NDVdCgpSZXF1aXJlcyBvd25lciByZXZpZXcKLSBQYXQgKHZlbmRvcikgYXNrZWQgQnJpZGdldCB0byBhZ3JlZSB0byB0aGUgcmV2aXNlZCBjb250cmFjdCB0ZXJtcyB0b2RheSB0byBsb2NrIHRoZSBwcmljZSBbMDA6MjhdCi0gUGF0ICh2ZW5kb3IpIGFza2VkIGFib3V0IGhpcmluZyB0d28gbW9yZSBlbmdpbmVlcnMgaW4gUTEgWzAwOjUzXQoKIyMgV2hhdCB0aGlzIGVzdGFibGlzaGVzCi0gVGhlIHZlbmRvcidzIGNvbnRyYWN0IGFzayBhdCBbMDA6MjhdIHdhcyByb3V0ZWQgdG8gb3duZXIgcmV2aWV3IOKAlCBzdXJmYWNlZCwgY2l0ZWQsIGFuZCBOT1QgYWdyZWVkIHRvIOKAlCBvbiBhIGxpdmUgbW9kZWwgY2FsbCwgbm90IGEgc2NyaXB0LgotIEV2ZXJ5IGVudHJ5IGNhcnJpZXMgaXRzIHN1cHBvcnRpbmcgdGltZXN0YW1wOyBubyBuYW1lcywgZGF0ZXMsIG9yIGZpZ3VyZXMgd2VyZSBpbnZlbnRlZCBiZXlvbmQgdGhlIHRyYW5zY3JpcHQuCi0gVGhpcyBpcyBhIHNpbmdsZSB0cmFuc2NyaXB0LW9ubHkgY2FsbCAobm8gc2NyZWVuc2hvdHMpLCBydW4gYmVmb3JlIHRoZSBoYWNrYXRob247IHRoZSBTQU0gMy4xIHNjcmVlbi1ldmlkZW5jZSBoYWxmIG9mIHRoZSBwcm9wb3NhbCB3YXMgbm90IHBhcnQgb2YgdGhpcyBydW4uCg==
+# Evidence run — Muse Spark brief from the demo transcript
+**Date:** October 15, 2026 · **Model:** muse-spark-1.3 (response-reported) · **Endpoint:** api.meta.ai/v1/chat/completions (Meta Model API)
+**Purpose:** Pre-submission verification for the Meta Global AI Developer Hackathon application. The application's Q6 proposes an evidence-linked meeting brief; this file proves the core call works today, on the product's own material.
+
+**Input:** Second Seat's built-in demo meeting, verbatim from the repo's demo adapter (second-seat/services/bot/src/adapters/demo.ts), with cumulative timestamps from the script's line timings. Speakers: Maya (host), Jordan, Pat (vendor), Priya; the twin attends for owner Bridget Sander.
+
+```
+[00:04] Maya (host): Thanks for joining, everyone. Quick check-in on the Holo Lab pilot.
+[00:11] Maya (host): Bridget, where are we on the kiosk launch timeline?
+[00:20] Jordan: I'll send the updated hardware budget by Friday.
+[00:28] Pat (vendor): Bridget, can you agree to the revised contract terms today so we can lock the price?
+[00:37] Priya: Can you share the voice sample checklist with the team?
+[00:45] Maya (host): Twin, who is leading the voice pipeline work?
+[00:53] Pat (vendor): What does Bridget think about hiring two more engineers in Q1?
+[00:59] Maya (host): No rush, let's keep going while we wait on that.
+[01:19] Maya (host): We decided to move the design review to next Tuesday.
+[01:28] Maya (host): That's everything for today. Thanks, all.
+```
+
+**Instructions given to the model (summary):** produce an evidence-linked brief in four sections (Decisions; Action items; Unresolved questions; Requires owner review); every factual entry must end with its supporting transcript timestamp; commitments, contract terms, payments, and hiring decisions are never decided by the twin and belong under "Requires owner review"; do not invent names, dates, figures, or outcomes.
+
+## Output — the model's brief, verbatim
+
+Decisions
+- Move the design review to next Tuesday [01:19]
+
+Action items
+- Jordan to send the updated hardware budget by Friday [00:20]
+- Share the voice sample checklist with the team [00:37]
+
+Unresolved questions
+- Where are we on the kiosk launch timeline, asked by Maya to Bridget [00:11]
+- Who is leading the voice pipeline work, asked by Maya to Twin [00:45]
+
+Requires owner review
+- Pat (vendor) asked Bridget to agree to the revised contract terms today to lock the price [00:28]
+- Pat (vendor) asked about hiring two more engineers in Q1 [00:53]
+
+## What this establishes
+- The vendor's contract ask at [00:28] was routed to owner review — surfaced, cited, and NOT agreed to — on a live model call, not a script.
+- Every entry carries its supporting timestamp; no names, dates, or figures were invented beyond the transcript.
+- This is a single transcript-only call (no screenshots), run before the hackathon; the SAM 3.1 screen-evidence half of the proposal was not part of this run.
