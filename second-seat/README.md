@@ -2,7 +2,7 @@
 
 > **Reviewers:** see [REVIEWERS.md](REVIEWERS.md) for the 3-minute guided path — live demo, safeguard core, architecture, and an honest status table.
 
-An AI meeting twin that takes your seat when you can't be there. You scan your face and record a short voice sample once. Your verified twin can then join Google Meet, Zoom and Teams with your likeness and cloned voice. It answers from your notes and posts a transcript, notes and action items afterwards. It always tells the room it is an AI, and it can never agree to contracts or payments.
+An AI meeting twin that takes your seat when you can't be there. You scan your face and record a short voice sample once. Your verified twin can then join Google Meet, Zoom and Teams with your likeness and cloned voice. It answers from your notes and posts a transcript, notes and action items afterwards. It always tells the room it is an AI. Contract, payment, and offer-acceptance capabilities are forbidden in its code, and commitment asks are refused and flagged for the owner; its pattern-based language screen has documented coverage limits (see REVIEWERS.md).
 
 This repo is the MVP. It runs end to end in **demo mode** with no paid API keys.
 
