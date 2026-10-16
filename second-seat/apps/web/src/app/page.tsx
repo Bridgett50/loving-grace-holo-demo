@@ -30,9 +30,9 @@ function Landing({ demo }: { demo: boolean }) {
     "ID and liveness check before a twin is created",
     "Consent vault with one-tap revocation",
     '"AI Twin of [you]" badge, spoken intro and recording notice',
-    "Content Credentials (C2PA) and watermark on everything it outputs",
-    "Never agrees to contracts or payments",
-    "Balance check, 20-second no-video stop, minute caps and automatic refunds",
+    "Owner verification and per-scope consent checks before any session",
+    "Contract, payment and offer-acceptance capabilities forbidden in code",
+    "Session guardrails: 20-second no-video stop, minute caps, voice-only fallback",
   ];
   return (
     <div className="space-y-16">
@@ -41,7 +41,7 @@ function Landing({ demo }: { demo: boolean }) {
           <Badge variant="secondary">AI meeting twin · always disclosed</Badge>
           <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">Your twin takes the second seat, so you don&apos;t have to be in every meeting.</h1>
           <p className="max-w-xl text-lg text-muted-foreground">
-            {BRAND.name} joins your meetings as a clearly labeled AI twin. It looks and sounds like you, answers from your notes, and hands you a transcript, notes and action items afterwards.
+            {BRAND.name} is built to join your meetings as a clearly labeled AI twin. It looks and sounds like you, answers from your notes, and hands you a transcript, notes and action items afterwards. Live today in scripted demo mode.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button asChild size="lg">
@@ -56,7 +56,7 @@ function Landing({ demo }: { demo: boolean }) {
           </div>
           {demo && <p className="text-sm text-muted-foreground">Demo mode: &ldquo;Watch a live demo&rdquo; skips the scan with a sample stylized twin and opens a scripted meeting.</p>}
         </div>
-        <TwinStage look="stylized" backgroundCss={PASTEL_STAGE_CSS} badge="AI Twin of Bridgett" className="shadow-2xl ring-1 ring-black/10" />
+        <TwinStage look="stylized" backgroundCss={PASTEL_STAGE_CSS} badge="AI Twin of Bridget" className="shadow-2xl ring-1 ring-black/10" />
       </section>
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {features.map(({ icon: Icon, title, body }) => (
