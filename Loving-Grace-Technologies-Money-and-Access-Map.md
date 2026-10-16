@@ -5,6 +5,8 @@
 **Verification standard:** Every dated claim below was re-checked against its primary source on Oct 15, 2026 by the Verification Officer (46 claims checked; 43 verified, 2 moved to Could Not Verify, 1 found already closed). Corrections applied are marked. Where the official page did not state a fact, it is labeled as such. A stale listicle triggered this project — listicles were treated as leads only, never as evidence. No loans, debt, or credit products appear anywhere in this report.
 **Background constraints baked in:** SAM.gov registration submitted Oct 2026, awaiting validation (UEI TY92B6HGEEL5 — not yet active); APEX Accelerator advisor Andrea Garth; Army xTech|Search 10 white paper due Oct 19, 2026 (separate urgent track — mapped, not reworked). The owner builds with AI tools (Lovable, Cursor) and wants a weekly hackathon cadence for practice.
 
+> **OWNER CORRECTION — Oct 15, 2026:** Fee-bearing grant programs are **EXCLUDED** under the owner's standing rule — no paid grant submissions, ever. The Amber Grant ($15 fee), HerRise MicroGrant ($15), Women Founders Grant ($25), Hustler's MicroGrant ($15), and Freed Fellowship ($19) are marked EXCLUDED wherever they appear below and must not be applied for. The CRM Opportunities tab carries the same exclusions.
+
 ---
 
 ## 1. OPEN NOW — verified opportunities with live deadlines
@@ -90,21 +92,21 @@ Each entry: what it is, who runs it, amount, deadline, direct link, eligibility 
 
 ### D. Founder grants (non-debt, non-dilutive)
 
-**23. Amber Grant (+ Monthly Startup + Business Category Grants)** — WomensNet — **$15,000/month** (one Amber, one Startup, one category each month) + three $75,000 year-end grants — **deadline October 31, 2026, 11:59 PM ET** (corrected per official Grant Rules) — https://ambergrantsforwomen.com/get-an-amber-grant/ — woman 18+, ≥50% women-owned, US/Canada; idea-stage eligible.
+**23. Amber Grant (+ Monthly Startup + Business Category Grants)** — WomensNet — **$15,000/month** (one Amber, one Startup, one category each month) + three $75,000 year-end grants — **deadline October 31, 2026, 11:59 PM ET** (corrected per official Grant Rules) — https://ambergrantsforwomen.com/get-an-amber-grant/ — woman 18+, ≥50% women-owned, US/Canada; idea-stage eligible. — **EXCLUDED (submission fee; owner rule Oct 15, 2026)**
 
-**24. HerRise MicroGrant** — HerSuiteSpot / Yva Jourdan Foundation — **$1,000/month** — **deadline October 31, 2026, 11:59 PM on the last day of the month (no timezone stated on the official page)** — https://www.hersuitespot.com/herrise/ — 51%+ women-owned, US-registered, <$1M revenue; women-of-color focus; $15 fee on official page.
+**24. HerRise MicroGrant** — HerSuiteSpot / Yva Jourdan Foundation — **$1,000/month** — **deadline October 31, 2026, 11:59 PM on the last day of the month (no timezone stated on the official page)** — https://www.hersuitespot.com/herrise/ — 51%+ women-owned, US-registered, <$1M revenue; women-of-color focus; $15 fee on official page. — **EXCLUDED (submission fee; owner rule Oct 15, 2026)**
 
 **25. Galaxy Grant** — Galaxy of Stars / Hidden Star 501(c)(3) — **$2,500 (current cycle)** — **deadline October 31, 2026** — https://galaxyofstars.org/galaxy-grants/ — free application; women & minority entrepreneurs; any stage.
 
-**26. Women Founders Grant** — WFG collective — **$5,000 lump sum** — **deadline October 31, 2026** — https://womenfoundersgrant.com/apply-now-women-grants — female-majority founder, any stage; $25 fee; excludes cannabis/vice/hate.
+**26. Women Founders Grant** — WFG collective — **$5,000 lump sum** — **deadline October 31, 2026** — https://womenfoundersgrant.com/apply-now-women-grants — female-majority founder, any stage; $25 fee; excludes cannabis/vice/hate. — **EXCLUDED (submission fee; owner rule Oct 15, 2026)**
 
 **27. Verizon Small Business Digital Ready $10K National Grant** — Verizon + LISC — **$10,000 (10/month)** — rolling 2026; courses completable "anytime in 2026" (December 7 corroborated by consistent 2026 secondaries, not on the official funding page) — https://digitalready.verizonwireless.com/funding — for-profit US business, 18+; complete 2 free courses/events to unlock the application; one application stays eligible all year.
 
 **28. IFundWomen Universal Grant Application** — IFundWomen — $2,500–$25,000 sponsor-matched — **rolling, apply anytime** — https://www.ifundwomen.com/grants/universal-grant-application-0 — single application auto-matched to partner grants; women-owned, any stage.
 
-**29. Hustler's MicroGrant** — HerSuiteSpot / Yva Jourdan Foundation — **$1,000/month** — monthly, no fixed cutoff published — https://www.hersuitespot.com/hustlersgrant/ — open to all US entrepreneurs; $15 fee.
+**29. Hustler's MicroGrant** — HerSuiteSpot / Yva Jourdan Foundation — **$1,000/month** — monthly, no fixed cutoff published — https://www.hersuitespot.com/hustlersgrant/ — open to all US entrepreneurs; $15 fee. — **EXCLUDED (submission fee; owner rule Oct 15, 2026)**
 
-**30. Freed Fellowship Grant** — Freed Fellowship — **$500/month + $2,500 year-end** — monthly, exact cutoff not published — https://freedfellowship.com — any US micro/small business; unrestricted funds, no equity; every applicant gets written feedback + mentoring trial; $19 fee.
+**30. Freed Fellowship Grant** — Freed Fellowship — **$500/month + $2,500 year-end** — monthly, exact cutoff not published — https://freedfellowship.com — any US micro/small business; unrestricted funds, no equity; every applicant gets written feedback + mentoring trial; $19 fee. — **EXCLUDED (submission fee; owner rule Oct 15, 2026)**
 
 **31. Tory Burch Foundation Fellows Program 2027** — **$2,000 education grant + yearlong fellowship** — **deadline November 17, 2026, 11:59 PM ET** — https://fellows.toryburchfoundation.org/prog/2027_fellows_program/ — founder 21+, legal US resident, largest stake; business ≥51% women-owned, for-profit; **≥$75,000 annual revenue — stated hard gate.**
 
@@ -120,7 +122,7 @@ AWS Activate (up to $5K self-serve / $200K portfolio), Google Cloud for Startups
 
 **Seat 2 — Mississippi Money Hunter.** Seven verified open-now Mississippi channels: MS Seed Fund $10K proof-of-concept grant (rolling), MS-FAST Phase 0 $3K SBIR-prep grant (year-round), FoundersPlus (women/minority founder program, rolling cohort), Mississippi SBDC counseling, MS APEX Accelerator, MDA minority/woman certification + workshops, Operation HOPE coaching — all free of charge except the Seed Fund's 25% cash match. One hard October deadline is almost certainly ineligible (BRRP, Oct 20 — 2023–24 storm-impacted businesses only; LGT formed June 2026). Six cyclical programs on watchlist. Working file: `lgt-seat-02-mississippi-money.md`.
 
-**Seat 3 — Tech Industry Money Hunter.** Twelve open items on primary sources: nine ERDCWERX commercial-solution openings (contract vehicles, not cash prizes — fit ranges high for the ITL CSO to low for hardware plays), DIU's rolling commercial-solutions opening (AI an explicit interest area), and Amber + HerRise for women founders. Black Ambition, Google Founders Funds, and Google's North America accelerators are all confirmed closed for 2026. Cloud-credit programs (AWS, Google Cloud, Microsoft) marked separately as credits, not cash. Working file: `lgt-seat-03-tech-industry-money.md`.
+**Seat 3 — Tech Industry Money Hunter.** Twelve open items on primary sources: nine ERDCWERX commercial-solution openings (contract vehicles, not cash prizes — fit ranges high for the ITL CSO to low for hardware plays), DIU's rolling commercial-solutions opening (AI an explicit interest area), and Amber + HerRise for women founders (both EXCLUDED — submission fees, owner rule Oct 15, 2026). Black Ambition, Google Founders Funds, and Google's North America accelerators are all confirmed closed for 2026. Cloud-credit programs (AWS, Google Cloud, Microsoft) marked separately as credits, not cash. Working file: `lgt-seat-03-tech-industry-money.md`.
 
 **Seat 4 — Who-Has-My-Money Mapper.** Set-aside landscape: the federal 8(a) door got structurally harder September 10, 2026 (final rule ended the race-based presumption; evidence-based test now required, and LGT's ~4.5-month age misses the 2-year track); WOSB/EDWOSB is the cleanest near-term federal certification; HUBZone is location-dependent with Grenada status unverified (check via APEX advisor); NMSDC MBE is fee-based with the MS affiliate's certification track currently unverified; the MDA application link returned 404 on Oct 15. Named buyer doors: ERDC/ERDCWERX (Vicksburg — the biggest), Army OSBP, DoD OSBP, USACE Vicksburg District. Opportunity posting channels: sam.gov ("W2R2" keyword for ERDC), GSA Forecast of Contracting Opportunities tool, USACE district forecasts, ERDCWERX.org, Mississippi MAGIC procurement portal, APEX bid boards. Working file: `lgt-seat-04-who-has-my-money.md`.
 
@@ -249,3 +251,9 @@ Coverage: week of Oct 19, 2026 → week of Jan 4, 2027. **17 events verified on 
 ---
 
 *Method note: all seats worked from live primary sources (program/organizer/agency official pages) checked Oct 15, 2026. Every dated claim was re-checked by the Verification Officer. Anything that failed verification sits in Section 7, never in the calendars. No loans, debt, or credit products were researched or recommended. Nothing was applied for, registered, submitted, or contacted. Files for this report: the per-seat working files `lgt-seat-01` through `lgt-seat-10` in this folder, plus `lgt-seat-09-protect-pitch.md` supporting files `tmsearch_exact.json` / `tmsearch_raw.json`.*
+
+---
+
+## Addendum — Oct 15, 2026 (missed by the original sweep; owner-supplied, verified same day)
+
+**Meta Global AI Developer Hackathon (Cerebral Valley)** — MISSED by the Weekly Competing seat's original calendar; Bridgett supplied it Oct 15, 2026 and it was verified the same day from the official event page (https://cerebralvalley.ai/e/meta-ai-developer-hackathon). Virtual, worldwide, free to enter if selected. **$1,000,000 prize pool** across indie-developer and startup tracks. Themes: "Build for Your World" / "Push the Frontier." Access to Meta's newest models (Muse Spark series, Muse Image, SAM 3.1) via Meta Model API + open weights; partner credits (Baseten/Modal/Fireworks). Applications opened Oct 13, 2026; **deadline Oct 25, 2026, 11:59 PM ET — rolling review with a hard cap of 20,000 acceptances; the portal can close early.** Selection criteria: project idea (clarity, feasibility, theme fit) and technical skill, weighted equally, judged from the application form only. Hackathon Oct 26–Nov 4; submissions due Nov 4, 9:00 PM ET; judging Nov 4–8; winners announced Nov 9, 2026. Logged on the CRM Opportunities tab (row 116) Oct 15, 2026.
