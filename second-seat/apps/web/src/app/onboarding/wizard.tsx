@@ -141,7 +141,7 @@ export function OnboardingWizard(props: { initialName: string; initialEmail: str
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="name">Full legal name</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" placeholder="Bridgett Sanders" />
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" placeholder="Bridget Sander" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
