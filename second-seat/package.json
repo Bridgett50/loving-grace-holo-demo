@@ -2,7 +2,7 @@
   "name": "second-seat",
   "version": "0.1.0",
   "private": true,
-  "description": "Second Seat by Loving Grace - an AI-native meeting twin (MVP)",
+  "description": "Second Seat - an AI-native meeting twin (MVP)",
   "license": "Apache-2.0",
   "packageManager": "pnpm@10.33.4",
   "engines": {

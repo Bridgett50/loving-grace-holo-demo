@@ -40,8 +40,8 @@ export function demoEvents(): CalendarEvent[] {
       startsAt: at(3),
       endsAt: at(33),
       platform: "demo",
-      organizerEmail: "maya@lovinggrace.example",
-      attendeeEmails: ["maya@lovinggrace.example", "jordan@lovinggrace.example", "priya@lovinggrace.example", "pat@vendor.example"],
+      organizerEmail: "maya@company.example",
+      attendeeEmails: ["maya@company.example", "jordan@company.example", "priya@company.example", "pat@vendor.example"],
     },
     {
       id: newId("ev"),
@@ -50,8 +50,8 @@ export function demoEvents(): CalendarEvent[] {
       endsAt: at(90),
       platform: "google_meet",
       joinUrl: "https://meet.google.com/abc-defg-hij",
-      organizerEmail: "maya@lovinggrace.example",
-      attendeeEmails: ["maya@lovinggrace.example", "jordan@lovinggrace.example", "priya@lovinggrace.example"],
+      organizerEmail: "maya@company.example",
+      attendeeEmails: ["maya@company.example", "jordan@company.example", "priya@company.example"],
     },
     {
       id: newId("ev"),
@@ -61,7 +61,7 @@ export function demoEvents(): CalendarEvent[] {
       platform: "zoom",
       joinUrl: "https://us02web.zoom.us/j/81234567890?pwd=demo",
       organizerEmail: "pat@vendor.example",
-      attendeeEmails: ["pat@vendor.example", "jordan@lovinggrace.example"],
+      attendeeEmails: ["pat@vendor.example", "jordan@company.example"],
     },
     {
       id: newId("ev"),
@@ -70,8 +70,8 @@ export function demoEvents(): CalendarEvent[] {
       endsAt: at(24 * 60 + 30),
       platform: "teams",
       joinUrl: "https://teams.microsoft.com/l/meetup-join/19%3ameeting_demo%40thread.v2/0",
-      organizerEmail: "jordan@lovinggrace.example",
-      attendeeEmails: ["jordan@lovinggrace.example"],
+      organizerEmail: "jordan@company.example",
+      attendeeEmails: ["jordan@company.example"],
     },
   ];
 }

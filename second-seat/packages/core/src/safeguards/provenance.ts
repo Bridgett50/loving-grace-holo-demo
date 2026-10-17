@@ -53,7 +53,7 @@ function canonical(cred: Omit<ContentCredential, "signature">): string {
 export async function createContentCredential(input: ContentCredentialInput, signingSecret: string, now = new Date()): Promise<ContentCredential> {
   const unsigned: Omit<ContentCredential, "signature"> = {
     manifestVersion: "c2pa-compatible/1",
-    claimGenerator: input.generator ?? "SecondSeat/0.1 (Loving Grace)",
+    claimGenerator: input.generator ?? "SecondSeat/0.1",
     createdAt: now.toISOString(),
     assetType: input.assetType,
     assetHash: { alg: "sha256", value: await sha256Hex(input.asset) },
@@ -72,7 +72,7 @@ export async function createContentCredential(input: ContentCredentialInput, sig
       },
       { label: "stds.schema-org.CreativeWork", data: { author: [{ "@type": "Person", name: input.ownerName }] } },
       {
-        label: "com.lovinggrace.ai_twin",
+        label: "com.secondseat.ai_twin",
         data: { disclosure: `AI Twin of ${input.ownerName}`, twinId: input.twinId, sessionId: input.sessionId ?? null, isHuman: false },
       },
     ],
