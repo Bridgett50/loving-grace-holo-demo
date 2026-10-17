@@ -73,7 +73,7 @@ export const CONSENT_TEXT_VERSION = "2026-10-14";
 export function consentText(name: string): string {
   return [
     `I, ${name}, am the person shown in the uploaded scan and heard in the uploaded voice sample.`,
-    "I authorize Second Seat to create an AI twin from my likeness and voice for use only by me, in meetings I authorize.",
+    "I authorize Loving Grace to create an AI twin from my likeness and voice for use only by me, in meetings I authorize.",
     "The twin will always identify itself as an AI twin, announce transcription, and carry content credentials.",
     "The twin may not agree to contracts, payments or other binding commitments on my behalf.",
     "My scan, voice model and notes are encrypted, never used to train shared models, never exported, and deleted on request.",

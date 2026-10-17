@@ -25,6 +25,7 @@ export function Wordmark() {
       <BrandMark />
       <span className="leading-none">
         <span className="block text-[15px] font-semibold tracking-tight">{BRAND.name}</span>
+        <span className="block text-[11px] text-muted-foreground">by {BRAND.company}</span>
       </span>
     </span>
   );

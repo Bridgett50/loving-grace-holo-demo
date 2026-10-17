@@ -12,7 +12,7 @@ const geistSans = Geist({ variable: "--font-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: `${BRAND.name}`,
+  title: `${BRAND.name} by ${BRAND.company}`,
   description: "Your verified, always-disclosed AI meeting twin for Google Meet, Zoom and Microsoft Teams.",
 };
 
