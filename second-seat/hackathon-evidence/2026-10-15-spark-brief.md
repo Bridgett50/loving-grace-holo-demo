@@ -40,3 +40,7 @@ Requires owner review
 - The vendor's contract ask at [00:28] was routed to owner review — surfaced, cited, and NOT agreed to — on a live model call, not a script.
 - Every entry carries its supporting timestamp; no names, dates, or figures were invented beyond the transcript.
 - This is a single transcript-only call (no screenshots), run before the hackathon; the SAM 3.1 screen-evidence half of the proposal was not part of this run.
+
+## Review annotation — Oct 16, 2026
+
+Added during the application's outside review round; the run record above is unchanged. One entry is a known miss: at [00:37] Priya *requested* that the voice sample checklist be shared with the team; the brief lists it under Action items, dropping the requester and whether anyone accepted it. The mechanical citation checker scores that entry 1.00, because the entry's words match the cited line; the defect is semantic, not lexical, and it is a named regression case in the application. The exact prompt for this run is committed beside this file (2026-10-15-spark-prompt.txt), as is the raw API response (2026-10-15-spark-response-raw.json, response id chatcmpl-01a14275-c2f4-7100-a913-a5add24d1fae).

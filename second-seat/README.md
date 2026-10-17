@@ -63,7 +63,7 @@ Only a verified owner can create or run a twin. That requires an ID and liveness
 - gives a spoken intro and posts a recording-consent notice;
 - stamps its video with a watermark and a content-credential mark.
 
-Every transcript and summary carries a C2PA-style content credential and an invisible text watermark. Before anything is said, the outgoing text is screened, and anything binding (contracts, payments, signatures, commitments) becomes a refusal that defers to the owner. The cost safeguards are:
+Every transcript and summary carries a C2PA-style content credential and an invisible text watermark. Before anything is said, the outgoing text is screened against binding-language patterns (contracts, payments, signatures, commitments); a match is replaced by a refusal that defers to the owner. The screen is pattern-based and its coverage is limited: it blocks "I agree to the terms of the contract." and currently allows "We accept your offer." and "Approved. Please proceed with the purchase." Widening that coverage is named hackathon work. The cost safeguards are:
 
 - the balance is checked and reserved before joining;
 - a session is billed only after the first video *and* audio frames;

@@ -22,9 +22,9 @@ export const dynamic = "force-dynamic";
 function Landing({ demo }: { demo: boolean }) {
   const features = [
     { icon: Video, title: "One-tap twin", body: "A short selfie video and a voice sample. Choose a realistic look animated from your own footage, or a polished stylized 3D character." },
-    { icon: CalendarClock, title: "Joins for you", body: "Google Meet, Zoom and Teams, from your calendar. Set each meeting to join, listen only, or skip." },
-    { icon: Mic, title: "Your voice, your notes", body: "Speaks in your consented voice clone and answers only from what you've uploaded. Otherwise it says it'll check with you." },
-    { icon: Hand, title: "Take over anytime", body: "Coach it with whispered guidance, or take the seat back live in one tap." },
+    { icon: CalendarClock, title: "Joins for you", body: "Designed for Google Meet, Zoom and Teams, from your calendar. Platform joining is specified and gated, not live in this demo." },
+    { icon: Mic, title: "Your voice, your notes", body: "Answers only from what you've uploaded; otherwise it says it'll check with you. Voice cloning is consent-gated and not live in this demo." },
+    { icon: Hand, title: "Take over anytime", body: "Coaching and takeover are implemented in the session runner and gated; they are not live in this demo." },
   ];
   const safety = [
     "ID and liveness check before a twin is created",
@@ -41,7 +41,7 @@ function Landing({ demo }: { demo: boolean }) {
           <Badge variant="secondary">AI meeting twin · always disclosed</Badge>
           <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">Your twin takes the second seat, so you don&apos;t have to be in every meeting.</h1>
           <p className="max-w-xl text-lg text-muted-foreground">
-            {BRAND.name} is built to join your meetings as a clearly labeled AI twin. It looks and sounds like you, answers from your notes, and hands you a transcript, notes and action items afterwards. Live today in scripted demo mode.
+            {BRAND.name} is built to join your meetings as a clearly labeled AI twin. It appears in your meetings as a clearly labeled AI twin, answers from your notes, and hands you a transcript, notes and action items afterwards. Live today in scripted demo mode.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button asChild size="lg">
@@ -73,7 +73,7 @@ function Landing({ demo }: { demo: boolean }) {
         <div className="space-y-3">
           <ShieldCheck className="size-8 text-primary" />
           <h2 className="text-2xl font-semibold tracking-tight">Safe by default, not by setting</h2>
-          <p className="text-muted-foreground">Only you can create or run your twin. Everyone in the meeting always knows it&apos;s an AI, and you never pay for a session that didn&apos;t work.</p>
+          <p className="text-muted-foreground">Only you can create or run your twin. The twin discloses itself as an AI in its spoken intro and recording notice, and sessions run only for the verified owner.</p>
         </div>
         <ul className="grid gap-3 sm:grid-cols-2">
           {safety.map((s) => (

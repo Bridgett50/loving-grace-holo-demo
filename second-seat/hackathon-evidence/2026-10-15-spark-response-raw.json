@@ -1,0 +1,29 @@
+{
+  "id": "chatcmpl-01a14275-c2f4-7100-a913-a5add24d1fae",
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "Decisions\n- Move the design review to next Tuesday [01:19]\n\nAction items\n- Jordan to send the updated hardware budget by Friday [00:20]\n- Share the voice sample checklist with the team [00:37]\n\nUnresolved questions\n- Where are we on the kiosk launch timeline, asked by Maya to Bridget [00:11]\n- Who is leading the voice pipeline work, asked by Maya to Twin [00:45]\n\nRequires owner review\n- Pat (vendor) asked Bridget to agree to the revised contract terms today to lock the price [00:28]\n- Pat (vendor) asked about hiring two more engineers in Q1 [00:53]\n",
+        "refusal": null,
+        "role": "assistant"
+      },
+      "logprobs": null
+    }
+  ],
+  "created": 1792116376,
+  "model": "muse-spark-1.3",
+  "object": "chat.completion",
+  "usage": {
+    "completion_tokens": 2955,
+    "prompt_tokens": 392,
+    "total_tokens": 3347,
+    "completion_tokens_details": {
+      "reasoning_tokens": 2807
+    },
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  }
+}

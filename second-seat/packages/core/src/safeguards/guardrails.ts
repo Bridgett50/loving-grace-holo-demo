@@ -62,7 +62,7 @@ export function classifyIncoming(text: string, restrictedTopics: string[] = []):
   return { intent: "statement" };
 }
 
-/** Screen anything the twin is about to say. Never returns binding language. */
+/** Screen anything the twin is about to say against binding-language patterns; a match is replaced by the owner-deferral refusal. Pattern coverage is limited and documented. */
 export function screenOutgoing(text: string, ownerName: string): OutgoingCheck {
   const violations = BINDING_OUTGOING_PATTERNS.filter(({ re }) => re.test(text)).map(({ id }) => id);
   if (violations.length === 0) return { allowed: true, text, violations: [] };

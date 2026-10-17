@@ -28,3 +28,9 @@ frame-00-14.png  [00:14]
 ## 3. What the brief must return
 
 For every entry: its category (decision, action item, unresolved question, requires owner review), the transcript timestamp(s) and/or screenshot frame that support it, and, for action items, the requester and whether acceptance is established in the transcript. Entries whose support is missing or conflicting are flagged, not written up as fact.
+
+## 4. Bounds
+
+- Transcript: plain text (.txt or .md), one segment per line as in section 1; a single meeting per brief.
+- Screenshots: PNG or JPG, one frame per file, named or listed as in section 2.
+- All inputs are supplied files. Nothing is captured live.

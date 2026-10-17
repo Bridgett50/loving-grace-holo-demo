@@ -7,7 +7,7 @@
 
 ## The 3-minute path
 
-1. **Run the live demo** (link above) — the scripted meeting shows the intended loop: join, disclose, relay, brief.
+1. **Run the live demo** (link above) — the scripted meeting shows a scripted join, the disclosure intro, and the meeting script.
 2. **Read the safeguard core** — [`packages/core`](packages/core): dependency-free TypeScript holding the session guard, contract & payment guardrails, disclosure, ownership and consent, the billing ledger, knowledge retrieval, and meeting summaries. Its unit tests live in [`packages/core/test`](packages/core/test) (Vitest).
 3. **Skim the architecture** — [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 4. **Check the honest platform status** — [`docs/PLATFORM_APPROVALS.md`](docs/PLATFORM_APPROVALS.md): the Google Meet bot path is a policy gray area, Zoom requires Marketplace review, Teams calling is voice-only today. We document the walls instead of hiding them.
@@ -24,7 +24,7 @@ The parts that must never fail are **not** delegated to a language model:
 - **Owner-only operation** — the twin runs only for its verified owner.
 - **Authority limits** — contract, payment, purchase-approval, and offer-acceptance capabilities are forbidden in the capability registry; incoming commitment asks are classified and refused with an owner flag, and outgoing utterances pass a pattern-based screen whose coverage is incomplete by test (see the safety paragraph below).
 
-These are enforced in deterministic TypeScript in `packages/core`, with unit tests — 81 tests across 7 files, all passing when run against this repo on October 15, 2026. Enforcement lives in the code layer, separate from model generation. The outgoing screen's observed behavior, checked by execution: it blocks "I agree to the terms of the contract." and currently allows "We accept your offer." — those misses are named regression targets for the hackathon build. The failure-mode choreography around those rules (watchdogs, refusal logging) is designed and documented; it is not yet verified in live conditions.
+These are enforced in deterministic TypeScript in `packages/core`, with unit tests — 81 tests across 7 files, all passing when run against this repo on October 15, 2026. Enforcement lives in the code layer, separate from model generation. The outgoing screen's observed behavior, checked by execution: it blocks "I agree to the terms of the contract." and currently allows "We accept your offer." and "Approved. Please proceed with the purchase." Those misses are named regression targets for the hackathon build. The failure-mode choreography around those rules (watchdogs, refusal logging) is designed and documented; it is not yet verified in live conditions.
 
 ## Status — what is real today
 
@@ -49,7 +49,7 @@ The extension proposed for the hackathon supplies the layer demo mode deliberate
 
 1. **Reasoning on Muse Spark** (Meta Model API) — the evidence-linked meeting brief moves from scripted demo output to a frontier model, running on supplied transcript segments and screenshots inside the existing demo.
 2. **Eyes from SAM 3.1 + Muse Spark** — SAM 3.1 segments shared-screen regions (slides, documents, whiteboards) so the evidence behind a brief entry is inspectable; Muse Spark interprets the transcript and the screenshots. Briefs cite what was *said* (timestamp) and what was *shown* (frame and region).
-3. **Visual briefs with Muse Image** — a one-page visual recap. Stretch goal only; outside the committed ten-day scope.
+Not a build item: **visual briefs with Muse Image** (a one-page visual recap) are a stretch goal only, outside the committed ten-day scope.
 
 The safeguard core stays deterministic and model-independent: swapping the model does not change the code — and does not widen the screen's coverage either, which is why regression cases for missed commitment language are part of the build. Live third-party meeting joining is also outside the ten-day scope. Pre-submission evidence: a Muse Spark brief produced from this repo's demo transcript on October 15, 2026 — `second-seat/hackathon-evidence/2026-10-15-spark-brief.md`.
 
