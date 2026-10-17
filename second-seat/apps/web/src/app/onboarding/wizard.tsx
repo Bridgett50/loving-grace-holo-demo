@@ -29,7 +29,7 @@ const CHALLENGES = [
   { id: "smile", label: "Give us a smile" },
 ];
 const VOICE_SCRIPT =
-  `Hi, this is my voice sample for my ${BRAND.name} twin. My twin will always tell people it's an AI, it will never agree to contracts or payments for me, and I can take over at any time.`;
+  `Hi, this is my voice sample for my ${BRAND.name} twin. My twin will always tell people it's an AI, its contract, payment and offer-acceptance capabilities are forbidden in code, and it flags anything like that for me, and I can take over at any time.`;
 const SCOPES: Array<{ id: ConsentScope; label: string; required?: boolean }> = [
   { id: "likeness_video", label: "Use my face and likeness to animate my twin on video", required: true },
   { id: "voice_clone", label: "Clone my voice so my twin can speak", required: true },

@@ -2,7 +2,7 @@
 
 > **Reviewers:** see [REVIEWERS.md](REVIEWERS.md) for the 3-minute guided path — live demo, safeguard core, architecture, and an honest status table.
 
-An AI meeting twin that takes your seat when you can't be there. You scan your face and record a short voice sample once. Your verified twin can then join Google Meet, Zoom and Teams with your likeness and cloned voice. It answers from your notes and posts a transcript, notes and action items afterwards. It always tells the room it is an AI. Contract, payment, and offer-acceptance capabilities are forbidden in its code, and commitment asks are refused and flagged for the owner; its pattern-based language screen has documented coverage limits (see REVIEWERS.md).
+An AI meeting twin that takes your seat when you can't be there. You scan your face and record a short voice sample once. Once platform integrations are live, your verified twin will be able to join Google Meet, Zoom and Teams with your likeness and cloned voice. It answers from your notes and posts a transcript, notes and action items afterwards. It always tells the room it is an AI. Contract, payment, and offer-acceptance capabilities are forbidden in its code, and commitment asks are refused and flagged for the owner; its pattern-based language screen has documented coverage limits (see REVIEWERS.md).
 
 This repo is the MVP. It runs end to end in **demo mode** with no paid API keys.
 
@@ -34,6 +34,8 @@ Open http://localhost:4310 and click **Create my twin**. In demo mode:
 Run each service alone with `pnpm dev:web` or `pnpm dev:bot`. **Watch a live demo** on the home page skips onboarding: it creates a sample twin and drops you straight into a meeting.
 
 ## What makes it AI-native
+
+*The loop below is the design target. Ask-me-live, relay, coach and takeover are specified and gated, not yet live in demo mode.*
 
 - **Ask me, live.** When a question isn't in your notes, the twin doesn't make something up. It tells the room it's checking with you, and the question pops up on your screen. Your answer is relayed into the meeting within seconds. If you don't answer, the twin promises a follow-up and tracks it for you.
 - **Pre-meeting brief.** For every calendar event the twin shows who's coming, what it can answer, what was left open last time and what it will defer, along with a readiness score that tells you which notes to add.

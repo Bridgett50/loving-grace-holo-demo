@@ -55,6 +55,6 @@ The safeguard core stays deterministic and model-independent: swapping the model
 
 ## About the builder
 
-Loving Grace Technologies, LLC (Grenada, Mississippi) is a SAM.gov-registered AI research and product company (UEI U5D5QT7QLRQ5 · CAGE 222V5), founded by Bridget Sander, who brings 10+ years in complex property claims — multimillion-dollar losses, estimating, and negotiation — to building agent systems that can be trusted in rooms where words become commitments.
+Loving Grace Technologies, LLC (Grenada, Mississippi) is a SAM.gov-registered AI research and product company (UEI U5D5QT7QLRQ5 · CAGE 222V5), founded by Bridget Sander, who builds agent systems around one discipline: what was said, what the evidence shows, and what still needs a person's approval are three different things.
 
 **Contact:** https://www.linkedin.com/in/bridgetsander · https://lovinggracetechnologies.com
