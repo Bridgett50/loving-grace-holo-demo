@@ -154,7 +154,7 @@ function writeTwin(uid: string, name: string, twinId: string, consent: ConsentRe
   const first = name.split(" ")[0];
   const persona: Persona = {
     tone: "Warm, concise and plain-spoken",
-    role: "Founder, Loving Grace",
+    role: "Founder",
     facts: [],
     restrictedTopics: ["medical", "salary", "lawsuit", "diagnosis"],
     deferralPhrase: `I don't have that in my notes. I'll check with ${first} and follow up.`,

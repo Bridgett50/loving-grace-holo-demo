@@ -2,7 +2,7 @@
 # New > Blueprint in the Render dashboard, then point it at this repository.
 services:
   - type: web
-    name: second-seat
+    name: second-seat-share
     runtime: docker
     plan: starter
     rootDir: second-seat
