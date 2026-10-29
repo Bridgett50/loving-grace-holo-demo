@@ -310,6 +310,36 @@ approves an exact follow-up package. All data is invented; nothing is real.
 - **F3 note corrected** to "A sent package is locked; only the evidence
   record stays exportable."
 
+## What is shown (continued)
+
+- **T17 accessibility.** `packages/core/src/t2/a11y.ts` is the single source
+  of truth for the room's accessibility surface: `A11Y_LABELS` (the
+  accessible name of every fixed control), `A11Y_CONTROLS` (stable id, role,
+  label, and landmark region per control, in keyboard focus order),
+  `availableControls(view, { demoMode })` (the documented region order —
+  meeting, demo, stream, guidance, takeover, package, plugins, approval,
+  evidence — with unavailable actions removed: demo controls only in
+  `?demo=1`, approve/send/compare hidden after takeover or once the package
+  locks, send only while approved-and-unsent), per-plugin
+  `pluginControlId`/`pluginControlLabel` names, the room palette
+  (`A11Y_TEXT_PAIRS`, every text pair ≥ 4.5:1, plus an `A11Y_FOCUS_RING`
+  ≥ 3:1, all checked with the `contrastRatio` WCAG helper),
+  `diffAnnouncements(prev, next)` polite live-region notes for transcript,
+  guidance, takeover, approval, and send changes plus
+  `demoStepAnnouncement` for guided-step changes, and `runKeyboardFlow`,
+  which drives a real room with Tab/Shift+Tab + Enter/Space/type only. The
+  meeting room renders from this module: every control's `aria-label`
+  comes from `A11Y_LABELS`, plugin buttons use `pluginControlLabel`, one
+  `role="status"` `aria-live="polite"` region announces every
+  `diffAnnouncements` state change (demo steps announce too), each region
+  is a `<section aria-labelledby>` in focus order, a visible
+  `:focus-visible` ring uses the module's focus-ring colour, and the layout
+  collapses to a single column under `640px`. Verified at unit level
+  (`test/t2-a11y.test.ts`: labels, focus order, contrast, a full
+  keyboard-only stream → guide → include → approve → compare → send flow,
+  announcements, and a static source check of the tsx) — no browser or
+  screen-reader run.
+
 ## Not built / follow-ups
 
 - Real authenticated server-side connector route (needed before any real send;
@@ -317,7 +347,9 @@ approves an exact follow-up package. All data is invented; nothing is real.
 - Browser e2e/DOM tests (no DOM test framework in this repo; not added).
   The T13 guided demo is covered by a headless core test instead
   (see above); T18 adds a headless whole-flow runner plus a script, but
-  still drives core directly, not a real browser DOM.
+  still drives core directly, not a real browser DOM. T17 is likewise
+  unit-level plus a static check of the tsx only — no browser or
+  screen-reader run.
 - Protection against a store edit that forges the evidence record itself to
   match a forged body (the T14 evidence binding catches stale evidence, not
   fully consistent forgeries).
