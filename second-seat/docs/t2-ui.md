@@ -274,6 +274,25 @@ approves an exact follow-up package. All data is invented; nothing is real.
   non-zero on failure. The narrated version is the "Demo walkthrough"
   section in `second-seat/README.md`.
 
+## T19 hardening review (part 1)
+
+- **Steered lines are recorded steered.** `streamNextLine()` peeks at the
+  oldest pending guidance for a twin line, renders the steered text first,
+  and records THAT text with the connector — the room transcript and the
+  connector log agree, and `room.connectorTranscript()` exposes the
+  connector-side log for the selected meeting.
+- **Every refusal carries an exported reason.** Stream, stale-line, guide,
+  and send refusals return a `reason` that is an exported
+  `*REFUSAL`/`*REASON` constant from `twin-room.ts`, worded with "refus-"
+  and free of sensitive values and meeting ids. Approve and plugin
+  include/refresh refusals keep their existing boolean-only shape
+  (existing tests pin it with `toEqual`).
+- **Export routes agree with the view.** Once the send state leaves
+  `unsent` (sent, failed, cancelled, unconfirmed) the package routes
+  (`copyText`, `mailtoHref`, `exportFile`, `compareImported`) return null
+  and the view reports all three export routes unavailable, so a control
+  the view shows as available never throws `MeetingDenied`.
+
 ## Not built / follow-ups
 
 - Real authenticated server-side connector route (needed before any real send;

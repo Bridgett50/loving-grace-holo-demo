@@ -57,20 +57,46 @@ export const TWIN_ROOM_SYSTEM_POLICY =
 export const TAKEOVER_REFUSAL = "Line refused: you took over; the twin is paused.";
 export const GUIDANCE_TAKEOVER_REFUSAL =
   "Guidance refused: you took over; the twin is paused.";
-export const GUIDANCE_EMPTY_REASON = "Empty guidance is ignored.";
-export const NO_MORE_LINES = "No more scripted lines in this meeting.";
+export const GUIDANCE_EMPTY_REASON = "Guidance refused: empty guidance is ignored.";
+export const NO_MORE_LINES = "Line refused: no more scripted lines in this meeting.";
 export const STALE_LINE_TEXT = "Stale line carried over from another meeting.";
+/** A stale line names another meeting, so it can never join this transcript. */
+export const STALE_LINE_REFUSAL =
+  "Line refused: it belongs to another meeting.";
+/** The connector turned a line down after the room's own checks passed. */
+export const CONNECTOR_LINE_REFUSAL =
+  "Line refused: the connector refused the line.";
 export const NOTE_F2 = "Takeover can't recall an email that's already sending.";
-export const NOTE_F3 = "A sent package stays exportable until the meeting changes.";
-export const SEND_DISABLED_REASON = "Sending is disabled outside test mode";
+export const NOTE_F3 =
+  "A sent package is locked; only the evidence record stays exportable.";
+export const SEND_DISABLED_REASON =
+  "Send refused: sending is disabled outside test mode";
+export const SEND_NOT_APPROVED_REASON =
+  "Send refused: the draft is not approved.";
+export const SEND_EDITED_AFTER_APPROVAL_REASON =
+  "Send refused: the draft was edited after approval.";
+export const SEND_TAKEOVER_REFUSAL =
+  "Send refused: you took over; the twin is paused.";
+export const SEND_ALREADY_RESOLVED_REASON =
+  "Already resolved; the send is refused and will not run again.";
+export const SEND_CONNECTOR_REFUSED_REASON =
+  "Send refused: the connector refused to send.";
+export const SEND_TRANSPORT_FAILED_REASON =
+  "Send refused: the transport failed.";
+export const APPROVE_REFUSED_REASON =
+  "Approval refused: the package cannot be approved in its current state.";
+export const PLUGIN_APPROVE_REFUSED_REASON =
+  "Plugin approval refused: the output cannot be included in its current state.";
+export const PLUGIN_REFRESH_REFUSED_REASON =
+  "Plugin refresh refused: the snapshot cannot be refreshed in its current state.";
 export const MAILTO_LABEL = "Open in your mail app";
 
 export type TwinStatus = "active" | "paused (you took over)";
 export type SendState = "unsent" | "sent" | "failed" | "unconfirmed" | "cancelled";
 export const CANCELLED_SEND_REASON =
-  "Send cancelled by takeover before the transport finished; it will not be retried.";
+  "Send refused: cancelled by takeover before the transport finished; it will not be retried.";
 export const UNCONFIRMED_SEND_REASON =
-  "Send unconfirmed — check your outbox before retrying; the previous attempt may already have sent.";
+  "Send refused: unconfirmed — check your outbox before retrying; the previous attempt may already have sent.";
 
 export type TwinRoomView = {
   readonly ownerId: string;
@@ -677,24 +703,27 @@ export function createTwinRoom(opts?: {
 
   function approvedBodyText(st: OwnerState, ms: MeetingState): string | null {
     const d = ms.draft;
-    // A sent package is locked: nothing exits through the package routes.
-    if (d.sendState === "sent") return null;
+    // Nothing exits once the send state leaves `unsent`: the connector
+    // denies export after a failed, cancelled, unconfirmed, or completed
+    // send, so the room refuses first and the view agrees.
+    if (d.sendState !== "unsent") return null;
     if (!d.approved) return null;
     if (d.jobId === null) return null;
     if (d.body !== d.approvedBody) return null;
     if (st.takenOver) return null;
-    return connector.exportApproved(st.principal, d.jobId);
+    try {
+      return connector.exportApproved(st.principal, d.jobId);
+    } catch {
+      // Last resort: never let a connector denial escape from a control
+      // the view reports as available.
+      return null;
+    }
   }
 
   function exportReady(st: OwnerState, ms: MeetingState): boolean {
-    const d = ms.draft;
-    // A sent package is locked: nothing exits through the package routes.
-    if (d.sendState === "sent") return false;
-    if (!d.approved) return false;
-    if (d.jobId === null) return false;
-    if (d.body !== d.approvedBody) return false;
-    if (st.takenOver) return false;
-    return true;
+    // Agree with the accessors by construction: the view reports a route
+    // as available exactly when reading it would return a body.
+    return approvedBodyText(st, ms) !== null;
   }
 
   return {
@@ -815,22 +844,23 @@ export function createTwinRoom(opts?: {
       if (st.takenOver) return refuseTakeover(st);
       const line = ms.script[ms.nextIndex];
       if (line === undefined) return { appended: false, reason: NO_MORE_LINES };
+      // Owner-guidance steering (T16): peek at the oldest pending guidance
+      // BEFORE recording, so the connector log and the room transcript agree
+      // on the steered text. Non-twin lines are never altered and never
+      // consume guidance, so one guidance steers exactly one twin answer.
+      // Steering only changes the rendered transcript line: it never
+      // approves, sends, or edits the package.
+      const pending = isTwinLine(line) ? ms.pendingGuidance[0] : undefined;
+      const text = pending !== undefined ? applyGuidance(line, pending.text) : line;
       const res = connector.appendTranscript(st.principal, ms.generationId, {
         meetingId: ms.meetingId,
-        text: line,
+        text,
       });
-      if (!res.appended) return { appended: false, reason: "Line refused by the connector." };
-      // Owner-guidance steering (T16): the next proactive twin answer for
-      // this meeting is rendered with the oldest pending guidance applied.
-      // Non-twin lines are never altered and never consume guidance, so one
-      // guidance steers exactly one twin answer. Steering only changes the
-      // rendered transcript line: it never approves, sends, or edits the
-      // package.
-      const pending = isTwinLine(line) ? ms.pendingGuidance.shift() : undefined;
+      if (!res.appended) return { appended: false, reason: CONNECTOR_LINE_REFUSAL };
       if (pending !== undefined) {
-        const rendered = applyGuidance(line, pending.text);
+        ms.pendingGuidance.shift();
         const steeredIndex = ms.transcript.length;
-        ms.transcript.push(rendered);
+        ms.transcript.push(text);
         ms.steeredLineIndexes.push(steeredIndex);
         const event = evidence.logGuidance(ms.meetingId, {
           redactedGuidance: redactPackageText(pending.text).redactedText,
@@ -846,11 +876,11 @@ export function createTwinRoom(opts?: {
       return { appended: true };
     },
 
-    staleLineAttempt(): { appended: boolean } {
+    staleLineAttempt(): { appended: boolean; reason?: string } {
       const st = active();
       // Paused rooms refuse stale lines at the room level too (reloaded
       // rooms keep live connector sessions so a later approval can rebind).
-      if (st.takenOver) return { appended: false };
+      if (st.takenOver) return { appended: false, reason: TAKEOVER_REFUSAL };
       const ms = selected(st);
       const other = st.meetings.find((m) => m.meetingId !== ms.meetingId);
       const foreignId = other ? other.meetingId : "no-such-meeting";
@@ -859,7 +889,18 @@ export function createTwinRoom(opts?: {
         text: STALE_LINE_TEXT,
       });
       if (res.appended) ms.transcript.push(STALE_LINE_TEXT);
-      return { appended: res.appended };
+      return res.appended ? { appended: true } : { appended: false, reason: STALE_LINE_REFUSAL };
+    },
+
+    /**
+     * The connector-side transcript log for the SELECTED meeting's session.
+     * After guidance steering this agrees with `view().transcript`: both
+     * hold the steered text, never the unsteered scripted line.
+     */
+    connectorTranscript(): readonly string[] {
+      const st = active();
+      const ms = selected(st);
+      return connector.transcript(st.principal, ms.generationId);
     },
 
     takeOver(): void {
@@ -1089,11 +1130,11 @@ export function createTwinRoom(opts?: {
         return { ok: false, reason: UNCONFIRMED_SEND_REASON };
       }
       if (!d.approved || d.jobId === null || d.callback === null) {
-        return { ok: false, reason: "Draft is not approved" };
+        return { ok: false, reason: SEND_NOT_APPROVED_REASON };
       }
-      if (d.body !== d.approvedBody) return { ok: false, reason: "Draft was edited after approval" };
-      if (st.takenOver) return { ok: false, reason: "Twin is paused after takeover" };
-      if (d.sendState !== "unsent") return { ok: false, reason: `Already ${d.sendState}` };
+      if (d.body !== d.approvedBody) return { ok: false, reason: SEND_EDITED_AFTER_APPROVAL_REASON };
+      if (st.takenOver) return { ok: false, reason: SEND_TAKEOVER_REFUSAL };
+      if (d.sendState !== "unsent") return { ok: false, reason: SEND_ALREADY_RESOLVED_REASON };
       const hash = packageHash(d.body);
       // Durable send intent BEFORE the transport: a crash after this write
       // reloads as "unconfirmed" instead of silently resending.
@@ -1115,7 +1156,7 @@ export function createTwinRoom(opts?: {
           // sent: clear the intent and stay unsent (a later send may retry).
           intents.delete(key);
           persistSlot(st, ms);
-          return { ok: false, reason: "Connector refused to send" };
+          return { ok: false, reason: SEND_CONNECTOR_REFUSED_REASON };
         }
       } catch {
         if (controller.signal.aborted) {
@@ -1134,7 +1175,7 @@ export function createTwinRoom(opts?: {
         // Evidence only: mirror the failure in the record (sentAt stays null).
         evidence.markSent(ms.meetingId, "failed");
         persistSlot(st, ms);
-        return { ok: false, reason: "Transport failed" };
+        return { ok: false, reason: SEND_TRANSPORT_FAILED_REASON };
       } finally {
         if (inflight.get(key)?.controller === controller) inflight.delete(key);
       }
