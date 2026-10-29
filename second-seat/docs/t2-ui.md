@@ -220,6 +220,33 @@ approves an exact follow-up package. All data is invented; nothing is real.
   output, which changes the package and clears approval like an edit; it is
   refused after takeover or once the send state leaves `unsent`.
 
+## What is shown (continued)
+
+- **T16 private owner guidance.** The "Guide the twin" input records private,
+  per-meeting guidance with a room-clock timestamp: it is never added to the
+  transcript, never shown to participants, and never put in the package body
+  unless the owner edits it in themselves. The next proactive twin answer
+  streamed for that meeting (the next `Twin:` scripted line) is rendered
+  with the pending guidance applied, under a small synthetic rule set
+  (`packages/core/src/t2/guidance.ts`): "short"/"brief" trims the answer to
+  its first sentence, "defer dates"/"no dates" replaces concrete
+  dates/months with "a date Bridgett will confirm", and anything else
+  prefixes the answer with "Noted — " unchanged. One guidance steers exactly
+  one twin answer; non-twin lines are never altered. Guidance never grants
+  authority: "send the email now" or "approve it" only steers transcript
+  rendering and never approves, sends, or changes the package. Guidance is
+  blocked after takeover (the twin is paused); once a meeting's send state
+  leaves `unsent`, guidance is still recorded but cannot change the package.
+  Each steering is logged in the evidence record (timestamp, meeting, steered
+  line index, guidance text REDACTED with the existing redactor) — events
+  from before approval merge into the record on approval — and guidance
+  events persist through the room store so a reload keeps each one exactly
+  once. The room view exposes `steeredLines` (transcript indexes steered by
+  guidance) and the UI marks those twin lines with a private indicator.
+  Limit: the seed scripts' twin answers are single sentences, so the
+  "short"/"brief" trim is observable in the steered-line marking and the
+  evidence event rather than in changed wording.
+
 ## Not built / follow-ups
 
 - Real authenticated server-side connector route (needed before any real send;

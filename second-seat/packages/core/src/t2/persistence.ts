@@ -167,6 +167,16 @@ export function roomTakeoverKey(ownerId: string): string {
   return `v1/${ownerId}/takeover`;
 }
 
+/** Stable store key for the per-owner private guidance channel. */
+export function roomGuidanceKey(ownerId: string): string {
+  return `v1/${ownerId}/guidance`;
+}
+
+/** Stable store key for the per-owner durable guidance events. */
+export function roomGuidanceEventsKey(ownerId: string): string {
+  return `v1/${ownerId}/guidance-events`;
+}
+
 /** Stable store key for the per-owner durable takeover events. */
 export function roomTakeoverEventsKey(ownerId: string): string {
   return `v1/${ownerId}/takeover-events`;
@@ -468,6 +478,157 @@ export function saveTakeoverEvents(
 ): void {
   try {
     store.set(roomTakeoverEventsKey(ownerId), JSON.stringify([...events]));
+  } catch {
+    // Best-effort only.
+  }
+}
+
+/** One recorded owner guidance: room-clock timestamp plus raw text. */
+export interface PersistedPendingGuidance {
+  readonly text: string;
+  readonly at: number;
+}
+
+/**
+ * The durable private guidance channel for one meeting: every recorded
+ * guidance text (shown only to the owner) plus the still-unconsumed queue
+ * that will steer upcoming twin answers. `meetingTitle` (stable across
+ * reloads) names the meeting.
+ */
+export interface PersistedMeetingGuidance {
+  readonly meetingTitle: string;
+  readonly history: readonly string[];
+  readonly pending: readonly PersistedPendingGuidance[];
+}
+
+/** A durable guidance steering event: which twin line one guidance steered. */
+export interface PersistedGuidanceEvent {
+  readonly at: number;
+  readonly kind: "guidance";
+  readonly meetingTitle: string;
+  readonly redactedGuidance: string;
+  readonly steeredLineIndex: number;
+}
+
+/**
+ * Load the durable per-owner guidance channel, in stored order. Returns an
+ * empty list when nothing was stored or the stored value is corrupt.
+ */
+export function loadMeetingGuidance(
+  store: RoomStore,
+  ownerId: string,
+): PersistedMeetingGuidance[] {
+  let raw: string | null;
+  try {
+    raw = store.get(roomGuidanceKey(ownerId));
+  } catch {
+    return [];
+  }
+  if (raw === null) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  const out: PersistedMeetingGuidance[] = [];
+  for (const entry of parsed) {
+    if (
+      !isRecord(entry) ||
+      typeof entry["meetingTitle"] !== "string" ||
+      !Array.isArray(entry["history"]) ||
+      !entry["history"].every((t) => typeof t === "string") ||
+      !Array.isArray(entry["pending"])
+    ) {
+      return [];
+    }
+    const pending: PersistedPendingGuidance[] = [];
+    for (const item of entry["pending"]) {
+      if (
+        !isRecord(item) ||
+        typeof item["text"] !== "string" ||
+        typeof item["at"] !== "number"
+      ) {
+        return [];
+      }
+      pending.push({ text: item["text"], at: item["at"] });
+    }
+    out.push({
+      meetingTitle: entry["meetingTitle"],
+      history: [...entry["history"]],
+      pending,
+    });
+  }
+  return out;
+}
+
+/** Persist the per-owner guidance channel, in order (best-effort). */
+export function saveMeetingGuidance(
+  store: RoomStore,
+  ownerId: string,
+  meetings: readonly PersistedMeetingGuidance[],
+): void {
+  try {
+    store.set(roomGuidanceKey(ownerId), JSON.stringify([...meetings]));
+  } catch {
+    // Best-effort only.
+  }
+}
+
+/**
+ * Load the durable per-owner guidance events, in stored order. Returns an
+ * empty list when nothing was stored or the stored value is corrupt.
+ */
+export function loadGuidanceEvents(
+  store: RoomStore,
+  ownerId: string,
+): PersistedGuidanceEvent[] {
+  let raw: string | null;
+  try {
+    raw = store.get(roomGuidanceEventsKey(ownerId));
+  } catch {
+    return [];
+  }
+  if (raw === null) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  const events: PersistedGuidanceEvent[] = [];
+  for (const entry of parsed) {
+    if (
+      !isRecord(entry) ||
+      typeof entry["at"] !== "number" ||
+      entry["kind"] !== "guidance" ||
+      typeof entry["meetingTitle"] !== "string" ||
+      typeof entry["redactedGuidance"] !== "string" ||
+      typeof entry["steeredLineIndex"] !== "number"
+    ) {
+      return [];
+    }
+    events.push({
+      at: entry["at"],
+      kind: "guidance",
+      meetingTitle: entry["meetingTitle"],
+      redactedGuidance: entry["redactedGuidance"],
+      steeredLineIndex: entry["steeredLineIndex"],
+    });
+  }
+  return events;
+}
+
+/** Persist the per-owner guidance events, in order (best-effort). */
+export function saveGuidanceEvents(
+  store: RoomStore,
+  ownerId: string,
+  events: readonly PersistedGuidanceEvent[],
+): void {
+  try {
+    store.set(roomGuidanceEventsKey(ownerId), JSON.stringify([...events]));
   } catch {
     // Best-effort only.
   }

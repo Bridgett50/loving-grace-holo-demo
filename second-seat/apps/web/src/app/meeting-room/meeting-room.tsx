@@ -265,12 +265,19 @@ export default function MeetingRoom() {
               Take over
             </Button>
           </div>
+          <p className="text-sm text-muted-foreground">
+            Guidance is private to the owner — never shown to participants,
+            never added to the transcript, and never put in the package.
+          </p>
           {v.guidance.length > 0 && (
-            <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-              {v.guidance.map((g, i) => (
-                <li key={i}>{g}</li>
-              ))}
-            </ul>
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Private guidance (only you see this)</p>
+              <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                {v.guidance.map((g, i) => (
+                  <li key={i}>{g}</li>
+                ))}
+              </ul>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -287,6 +294,9 @@ export default function MeetingRoom() {
             {v.transcript.map((line, i) => (
               <li key={i} className="text-sm">
                 {line}
+                {v.steeredLines.includes(i) && (
+                  <span className="ml-2 font-medium">· steered by your guidance (private)</span>
+                )}
               </li>
             ))}
           </ul>

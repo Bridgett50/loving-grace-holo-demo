@@ -21,6 +21,19 @@ export interface TakeoverEvent {
   readonly kind: TakeoverEventKind;
 }
 
+export interface GuidanceEvent {
+  /** Milliseconds since the Unix epoch, from the injected clock. */
+  readonly at: number;
+  /**
+   * The guidance text that steered the twin answer, REDACTED with the
+   * package redactor (never the plaintext). The record is per-meeting, so
+   * the meeting is the record's own meeting.
+   */
+  readonly redactedGuidance: string;
+  /** Index into the meeting's transcript of the twin line this guidance steered. */
+  readonly steeredLineIndex: number;
+}
+
 export interface EvidenceRedaction {
   readonly category: string;
   readonly count: number;
@@ -41,6 +54,7 @@ export interface EvidenceRecord {
   readonly approvalPrincipal: string;
   readonly redactions: readonly EvidenceRedaction[];
   readonly takeoverEvents: readonly TakeoverEvent[];
+  readonly guidanceEvents: readonly GuidanceEvent[];
 }
 
 function copyRedactions(
@@ -65,6 +79,7 @@ function copyRecord(record: EvidenceRecord): EvidenceRecord {
       positions: [...r.positions],
     })),
     takeoverEvents: record.takeoverEvents.map((e) => ({ ...e })),
+    guidanceEvents: record.guidanceEvents.map((e) => ({ ...e })),
   };
 }
 
@@ -85,6 +100,11 @@ export function exportEvidenceJson(record: EvidenceRecord): string {
       positions: [...r.positions],
     })),
     takeoverEvents: record.takeoverEvents.map((e) => ({ at: e.at, kind: e.kind })),
+    guidanceEvents: record.guidanceEvents.map((e) => ({
+      at: e.at,
+      redactedGuidance: e.redactedGuidance,
+      steeredLineIndex: e.steeredLineIndex,
+    })),
   };
   return JSON.stringify(ordered, null, 2);
 }
@@ -108,6 +128,23 @@ export interface EvidenceStore {
   markSent(meetingId: string, sendState: EvidenceSendState): EvidenceRecord | null;
   logTakeover(meetingId: string): TakeoverEvent;
   /**
+   * Log one consumed guidance steering for `meetingId`: the room-clock
+   * timestamp, the REDACTED guidance text, and which transcript line it
+   * steered. Like takeovers, events logged before any approval wait in a
+   * pending queue and merge into the record when that meeting is approved;
+   * events logged after approval join the record immediately too.
+   */
+  logGuidance(
+    meetingId: string,
+    input: { redactedGuidance: string; steeredLineIndex: number },
+  ): GuidanceEvent;
+  /**
+   * Rehydrate durable pre-approval guidance events after a reload. Events
+   * already in the saved record or already pending are skipped, so repeated
+   * reloads log each steering exactly once.
+   */
+  importGuidances(meetingId: string, events: readonly GuidanceEvent[]): void;
+  /**
    * Rehydrate durable pre-approval takeover events after a reload: they
    * join the pending queue for `meetingId` (in order, without duplicates)
    * so a later `saveApproved` merges them into the evidence record. Saved
@@ -116,6 +153,24 @@ export interface EvidenceStore {
    */
   importTakeovers(meetingId: string, events: readonly TakeoverEvent[]): void;
   clear(): void;
+}
+
+function isGuidanceEvent(value: unknown): value is GuidanceEvent {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as Record<string, unknown>)["at"] === "number" &&
+    typeof (value as Record<string, unknown>)["redactedGuidance"] === "string" &&
+    typeof (value as Record<string, unknown>)["steeredLineIndex"] === "number"
+  );
+}
+
+function sameGuidanceEvent(a: GuidanceEvent, b: GuidanceEvent): boolean {
+  return (
+    a.at === b.at &&
+    a.redactedGuidance === b.redactedGuidance &&
+    a.steeredLineIndex === b.steeredLineIndex
+  );
 }
 
 /**
@@ -128,6 +183,7 @@ export function createInMemoryEvidenceStore(opts?: {
   const now = opts?.now ?? (() => Date.now());
   const records = new Map<string, EvidenceRecord>();
   const pendingTakeovers = new Map<string, TakeoverEvent[]>();
+  const pendingGuidances = new Map<string, GuidanceEvent[]>();
 
   return {
     get(meetingId: string): EvidenceRecord | null {
@@ -153,7 +209,14 @@ export function createInMemoryEvidenceStore(opts?: {
       ) {
         return null;
       }
-      const copy = copyRecord(record);
+      // Records written before owner guidance existed carry no guidance
+      // events; they load as empty rather than failing closed.
+      const guidanceEvents =
+        (record as { guidanceEvents?: unknown }).guidanceEvents ?? [];
+      if (!Array.isArray(guidanceEvents) || !guidanceEvents.every(isGuidanceEvent)) {
+        return null;
+      }
+      const copy = copyRecord({ ...record, guidanceEvents: [...guidanceEvents] });
       records.set(copy.meetingId, copy);
       return copyRecord(copy);
     },
@@ -169,6 +232,7 @@ export function createInMemoryEvidenceStore(opts?: {
         approvalPrincipal: input.approvalPrincipal,
         redactions: copyRedactions(input.redactions),
         takeoverEvents: [...(pendingTakeovers.get(input.meetingId) ?? [])],
+        guidanceEvents: [...(pendingGuidances.get(input.meetingId) ?? [])],
       };
       records.set(input.meetingId, record);
       return copyRecord(record);
@@ -219,9 +283,49 @@ export function createInMemoryEvidenceStore(opts?: {
       pendingTakeovers.set(meetingId, pending);
     },
 
+    logGuidance(
+      meetingId: string,
+      input: { redactedGuidance: string; steeredLineIndex: number },
+    ): GuidanceEvent {
+      const event: GuidanceEvent = {
+        at: now(),
+        redactedGuidance: input.redactedGuidance,
+        steeredLineIndex: input.steeredLineIndex,
+      };
+      const pending = pendingGuidances.get(meetingId) ?? [];
+      pending.push(event);
+      pendingGuidances.set(meetingId, pending);
+      const found = records.get(meetingId);
+      if (found) {
+        records.set(meetingId, {
+          ...copyRecord(found),
+          guidanceEvents: [...found.guidanceEvents, { ...event }],
+        });
+      }
+      return { ...event };
+    },
+
+    importGuidances(meetingId: string, events: readonly GuidanceEvent[]): void {
+      const pending = pendingGuidances.get(meetingId) ?? [];
+      const recorded = records.get(meetingId)?.guidanceEvents ?? [];
+      for (const event of events) {
+        if (!isGuidanceEvent(event)) continue;
+        const candidate: GuidanceEvent = {
+          at: event.at,
+          redactedGuidance: event.redactedGuidance,
+          steeredLineIndex: event.steeredLineIndex,
+        };
+        if (recorded.some((e) => sameGuidanceEvent(e, candidate))) continue;
+        if (pending.some((e) => sameGuidanceEvent(e, candidate))) continue;
+        pending.push(candidate);
+      }
+      pendingGuidances.set(meetingId, pending);
+    },
+
     clear(): void {
       records.clear();
       pendingTakeovers.clear();
+      pendingGuidances.clear();
     },
   };
 }

@@ -1,6 +1,7 @@
 export * from "./connector";
 export * from "./demo-mode";
 export * from "./email-compare";
+export * from "./guidance";
 export * from "./redaction";
 export * from "./evidence";
 export * from "./persistence";
