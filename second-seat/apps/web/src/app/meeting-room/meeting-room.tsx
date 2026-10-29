@@ -3,8 +3,11 @@
 import { useEffect, useState } from "react";
 import {
   MAILTO_LABEL,
+  createDemoController,
   createLocalStorageRoomStore,
   createTwinRoom,
+  isDemoMode,
+  type DemoStep,
   type EmailComparison,
   type TwinRoom,
 } from "@second-seat/core";
@@ -31,6 +34,13 @@ export default function MeetingRoom() {
   const [draftText, setDraftText] = useState(room.view().draft.body);
   const [importText, setImportText] = useState("");
   const [compared, setCompared] = useState<EmailComparison | null | undefined>(undefined);
+  const [demoOn] = useState(
+    () => typeof window !== "undefined" && isDemoMode(window.location.search),
+  );
+  const [demoCtrl] = useState(() => createDemoController(room));
+  const [demoStep, setDemoStep] = useState<DemoStep | null>(() =>
+    demoCtrl.current(),
+  );
   const v = room.view();
 
   useEffect(() => {
@@ -43,6 +53,48 @@ export default function MeetingRoom() {
 
   function refresh() {
     setTick((n) => n + 1);
+  }
+
+  useEffect(() => {
+    if (!demoOn) return;
+    function onKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      const typing =
+        target !== null &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable);
+      void (async () => {
+        const acted = await demoCtrl.demoKeyAction(e.key, typing);
+        if (acted !== null) {
+          setDemoStep(demoCtrl.current());
+          setDraftText(room.view().draft.body);
+          setCopied(false);
+          setCompared(undefined);
+          setTick((n) => n + 1);
+        }
+      })();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [demoOn, demoCtrl, room]);
+
+  async function onDemoNext() {
+    await demoCtrl.next();
+    setDemoStep(demoCtrl.current());
+    setDraftText(room.view().draft.body);
+    setCopied(false);
+    setCompared(undefined);
+    refresh();
+  }
+
+  function onDemoRestart() {
+    demoCtrl.reset();
+    setDemoStep(demoCtrl.current());
+    setDraftText(room.view().draft.body);
+    setCopied(false);
+    setCompared(undefined);
+    refresh();
   }
 
   async function onSend() {
@@ -101,6 +153,47 @@ export default function MeetingRoom() {
           Scripted meetings, a test-mode fake owner switch, and an in-browser fake mail transport.
         </AlertDescription>
       </Alert>
+
+      {demoOn && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Guided demo</CardTitle>
+            <CardDescription>
+              Synthetic walkthrough of the twin room. Nothing here is real
+              data and nothing is really sent.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div
+              role="status"
+              aria-live="polite"
+              aria-label={demoStep ? demoStep.label : "Guided demo complete"}
+            >
+              <p className="text-sm font-medium">
+                {demoStep
+                  ? demoStep.caption
+                  : "Demo complete — you took over and the twin is paused."}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                aria-label="Next step"
+                onClick={onDemoNext}
+                disabled={demoStep === null}
+              >
+                Next step
+              </Button>
+              <Button variant="outline" onClick={onDemoRestart}>
+                Restart demo
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Shortcuts: Right arrow or N advances one step, R restarts. Keys
+              typed in inputs are ignored.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex flex-wrap gap-2">
         {["bridgett", "dana"].map((id) => (

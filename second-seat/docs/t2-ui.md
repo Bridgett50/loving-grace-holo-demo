@@ -153,10 +153,38 @@ approves an exact follow-up package. All data is invented; nothing is real.
   package is sent/locked/cancelled/unconfirmed. Include/exclude state persists
   through the existing store so a reload keeps it.
 
+## What is shown (continued)
+
+- **T13 guided demo mode (`?demo=1`).** Opening `/meeting-room?demo=1`
+  shows a "Guided demo" card above the room: a caption bar
+  (`role="status"`, `aria-live="polite"`, labelled per step), a labelled
+  "Next step" button (plus Restart), and the shortcut hint (Right arrow /
+  `N` = next, `R` = restart; keys typed in inputs are ignored). Without
+  `?demo=1` the UI is unchanged. All demo logic lives in core
+  (`packages/core/src/t2/demo-mode.ts` — `isDemoMode()`, the ordered
+  `DEMO_STEPS` script, `createDemoController()`), so the web UI only
+  renders the current caption and forwards button/keypresses. The script
+  runs headlessly against a real twin room: join the Q3 launch sync ->
+  stream the twin's proactive answer -> owner guidance -> include the
+  `action-items` plugin output -> approve the exact package -> send once
+  through the test fake transport -> comparison view (imported text
+  compared to the approved package) -> evidence record view/export ->
+  owner takeover (last, twin paused). Honest note: the flow test
+  (`t2-demo-mode.test.ts`) is headless — it drives `next()` step by step
+  and asserts the room state, but there is no browser end-to-end test
+  because this repo has no DOM test tooling (no Playwright, no
+  testing-library, no jsdom) and dependencies are frozen. One subtlety the
+  demo documents in code: a sent package locks by design, so the room's
+  own `compareImported()` returns null after sending; the demo's
+  comparison step therefore rebuilds the approved package from the exact
+  sent body and diffs with the same pure comparison the room uses.
+
 ## Not built / follow-ups
 
 - Real authenticated server-side connector route (needed before any real send;
   `productionDispatch` stays disabled).
 - Browser e2e/DOM tests (no DOM test framework in this repo; not added).
+  The T13 guided demo is covered by a headless core test instead
+  (see above).
 
 No real email, conferencing, or model behaviour is claimed anywhere here.
