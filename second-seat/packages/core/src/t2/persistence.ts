@@ -98,6 +98,12 @@ export interface SendIntent {
 
 export type PersistedSendState = "unsent" | "sent" | "failed" | "cancelled";
 
+/** An owner-included plugin section (redacted snapshot text). */
+export interface PersistedPluginSection {
+  readonly id: string;
+  readonly text: string;
+}
+
 /** Everything the room persists per owner + meeting. */
 export interface PersistedDraft {
   readonly version: 1;
@@ -109,6 +115,12 @@ export interface PersistedDraft {
   readonly approvedBody: string | null;
   readonly approvedHash: string | null;
   readonly approved: boolean;
+  /** Editable package base (redacted); included sections append after it. */
+  readonly pluginBase: string;
+  /** Owner-included plugin sections, in display order. */
+  readonly pluginSections: readonly PersistedPluginSection[];
+  /** Owner-excluded plugin ids. */
+  readonly pluginRejected: readonly string[];
   readonly sendState: PersistedSendState;
   readonly intent: SendIntent | null;
   readonly evidence: EvidenceRecord | null;
@@ -229,6 +241,36 @@ export function loadPersistedDraft(
   if (packageHash(parsed["body"]) !== parsed["bodyHash"]) return null;
   if (!Array.isArray(parsed["redactions"])) return null;
   if (typeof parsed["approved"] !== "boolean") return null;
+  // Plugin approval state: absent means "no plugin choices yet" (records
+  // written before plugins existed); present-but-malformed fails closed.
+  const body = parsed["body"] as string;
+  const pluginBase =
+    parsed["pluginBase"] === undefined ? body : parsed["pluginBase"];
+  if (typeof pluginBase !== "string") return null;
+  let pluginSections: PersistedPluginSection[] = [];
+  if (parsed["pluginSections"] !== undefined) {
+    if (!Array.isArray(parsed["pluginSections"])) return null;
+    for (const entry of parsed["pluginSections"]) {
+      if (
+        !isRecord(entry) ||
+        typeof entry["id"] !== "string" ||
+        typeof entry["text"] !== "string"
+      ) {
+        return null;
+      }
+      pluginSections.push({ id: entry["id"], text: entry["text"] });
+    }
+  }
+  let pluginRejected: string[] = [];
+  if (parsed["pluginRejected"] !== undefined) {
+    if (
+      !Array.isArray(parsed["pluginRejected"]) ||
+      !parsed["pluginRejected"].every((id) => typeof id === "string")
+    ) {
+      return null;
+    }
+    pluginRejected = [...parsed["pluginRejected"]];
+  }
   if (!isSendState(parsed["sendState"])) return null;
   const intent = readIntent(parsed["intent"]);
   // A present-but-malformed intent is treated like tampering: fail closed.
@@ -272,6 +314,9 @@ export function loadPersistedDraft(
     approvedHash:
       parsed["approved"] === true ? (parsed["approvedHash"] as string) : null,
     approved: parsed["approved"],
+    pluginBase,
+    pluginSections,
+    pluginRejected,
     sendState: parsed["sendState"],
     intent,
     evidence,

@@ -22,6 +22,13 @@ import {
 } from "./email-compare";
 import { redactPackageText, type CategoryRedactions } from "./redaction";
 import {
+  BUILTIN_PLUGINS,
+  renderPluginOutput,
+  runAllPlugins,
+  type MeetingContext,
+  type PluginOutput,
+} from "./plugins";
+import {
   createInMemoryEvidenceStore,
   exportEvidenceJson,
   type EvidenceRecord,
@@ -76,6 +83,13 @@ export type TwinRoomView = {
   readonly refusal: string | null;
   readonly exportInventory: { readonly copy: boolean; readonly mailto: boolean; readonly file: boolean };
   readonly notes: readonly string[];
+  readonly plugins: ReadonlyArray<{
+    readonly id: string;
+    readonly label: string;
+    readonly title: string;
+    readonly lines: readonly string[];
+    readonly status: "proposed" | "approved" | "rejected";
+  }>;
 };
 
 export type ReasoningContext = {
@@ -105,7 +119,15 @@ type MeetingState = {
   generationId: string;
   sourceEdits: number;
   draft: DraftState;
+  /** Editable package part (redacted); approved plugin sections append after it. */
+  pluginBase: string;
+  /** Owner-included plugin sections (redacted snapshots), in display order. */
+  pluginSections: Array<{ readonly id: string; readonly text: string }>;
+  /** Owner-excluded plugin ids for the selected meeting. */
+  rejectedPlugins: string[];
 };
+
+export type PluginSection = { readonly id: string; readonly text: string };
 
 type OwnerState = {
   principal: OwnerPrincipal;
@@ -262,6 +284,9 @@ export function createTwinRoom(opts?: {
           approved: false,
           sendState: "unsent",
         },
+        pluginBase: redacted.redactedText,
+        pluginSections: [],
+        rejectedPlugins: [],
       };
     });
     owners.set(seed.ownerId, {
@@ -281,6 +306,70 @@ export function createTwinRoom(opts?: {
     return roomStoreKey(ownerId, meetingTitle);
   }
 
+  /**
+   * Redact a proposed plugin output into the exact section snapshot that is
+   * appended to the package when the owner includes it.
+   */
+  function snapshotPluginOutput(output: PluginOutput): string {
+    return redactPackageText(renderPluginOutput(output)).redactedText;
+  }
+
+  /**
+   * Rebuild the package body from the editable base plus the owner-included
+   * plugin sections. Everything combined is already redacted, so re-running
+   * the redactor only refreshes the metadata positions.
+   */
+  function composePluginBody(
+    base: string,
+    sections: ReadonlyArray<{ readonly id: string; readonly text: string }>,
+  ): { body: string; redactions: CategoryRedactions[] } {
+    let combined = base;
+    for (const s of sections) combined += s.text;
+    const redone = redactPackageText(combined);
+    return { body: redone.redactedText, redactions: [...redone.redactions] };
+  }
+
+  /** The selected meeting's context for plugins: never another meeting's. */
+  function meetingContextFor(st: OwnerState, ms: MeetingState): MeetingContext {
+    return {
+      meetingId: ms.meetingId,
+      meetingTitle: ms.title,
+      transcript: [...ms.transcript],
+      script: [...ms.script],
+      notes: [...st.notes],
+    };
+  }
+
+  /**
+   * Plugins run only while the package is still editable: never after
+   * takeover, and never once the send state leaves "unsent" (sent/locked,
+   * cancelled, unconfirmed, failed).
+   */
+  function pluginsRunnable(st: OwnerState, ms: MeetingState): boolean {
+    if (st.takenOver) return false;
+    return ms.draft.sendState === "unsent";
+  }
+
+  function refreshPluginBody(ms: MeetingState): void {
+    const composed = composePluginBody(ms.pluginBase, ms.pluginSections);
+    ms.draft.body = composed.body;
+    ms.draft.redactions = composed.redactions;
+  }
+
+  /**
+   * Including or removing a plugin output changes the package, so it clears
+   * any existing package approval exactly like an edit.
+   */
+  function clearApprovalForPluginChange(st: OwnerState, ms: MeetingState): void {
+    ms.draft.approved = false;
+    intents.delete(slotKey(st.ownerId, ms.title));
+    ms.sourceEdits += 1;
+    connector.act(st.principal, ms.meetingId, {
+      type: "edit",
+      text: `${ms.title} source rev ${ms.sourceEdits}`,
+    });
+  }
+
   function persistSlot(st: OwnerState, ms: MeetingState): void {
     if (store === null) return;
     const d = ms.draft;
@@ -295,6 +384,9 @@ export function createTwinRoom(opts?: {
       approvedHash:
         d.approved && d.approvedBody !== null ? packageHash(d.approvedBody) : null,
       approved: d.approved,
+      pluginBase: ms.pluginBase,
+      pluginSections: ms.pluginSections.map((s) => ({ id: s.id, text: s.text })),
+      pluginRejected: [...ms.rejectedPlugins],
       // "unconfirmed" is the live view of a persisted pending intent; the
       // stored send state stays "unsent" so the pair keeps validating.
       sendState: d.sendState === "unconfirmed" ? "unsent" : d.sendState,
@@ -351,7 +443,15 @@ export function createTwinRoom(opts?: {
         }
       }
       for (const ms of st.meetings) {
-        const saved = loadPersistedDraft(store, st.ownerId, ms.title);
+        const loaded = loadPersistedDraft(store, st.ownerId, ms.title);
+        // Fail closed on hand-edited plugin state: the stored body must be
+        // exactly the stored base plus the stored included sections.
+        const saved =
+          loaded !== null &&
+          composePluginBody(loaded.pluginBase, loaded.pluginSections).body ===
+            loaded.body
+            ? loaded
+            : null;
         if (saved === null) {
           persistSlot(st, ms);
           continue;
@@ -359,6 +459,12 @@ export function createTwinRoom(opts?: {
         restoredFromPersistence = true;
         ms.draft.body = saved.body;
         ms.draft.redactions = [...saved.redactions];
+        ms.pluginBase = saved.pluginBase;
+        ms.pluginSections = saved.pluginSections.map((s) => ({
+          id: s.id,
+          text: s.text,
+        }));
+        ms.rejectedPlugins = [...saved.pluginRejected];
         if (saved.evidence !== null) evidence.restore(saved.evidence);
         if (
           saved.approved &&
@@ -439,6 +545,11 @@ export function createTwinRoom(opts?: {
       if (!st) throw new Error("no active owner");
       const ms = selected(st);
       const ready = exportReady(st, ms);
+      // Proposed outputs are computed only while plugins may run; after
+      // takeover or once the package leaves "unsent" nothing is proposed.
+      const proposed = pluginsRunnable(st, ms)
+        ? runAllPlugins(meetingContextFor(st, ms))
+        : [];
       return {
         ownerId: st.ownerId,
         ownerName: st.ownerName,
@@ -460,6 +571,21 @@ export function createTwinRoom(opts?: {
         refusal: st.refusal,
         exportInventory: { copy: ready, mailto: ready, file: ready },
         notes: [NOTE_F2, NOTE_F3],
+        plugins: BUILTIN_PLUGINS.map((p) => {
+          const output = proposed.find((o) => o.id === p.id);
+          const status = ms.pluginSections.some((s) => s.id === p.id)
+            ? ("approved" as const)
+            : ms.rejectedPlugins.includes(p.id)
+              ? ("rejected" as const)
+              : ("proposed" as const);
+          return {
+            id: p.id,
+            label: p.label,
+            title: output ? output.title : "",
+            lines: output ? [...output.lines] : [],
+            status,
+          };
+        }),
       };
     },
 
@@ -599,9 +725,10 @@ export function createTwinRoom(opts?: {
         throw new Error("Package is locked after send; it can no longer be edited.");
       }
       // Redact before storing: the shown/hashed package is always redacted.
+      // Owner-included plugin sections stay appended after the edited base.
       const redacted = redactPackageText(text);
-      ms.draft.body = redacted.redactedText;
-      ms.draft.redactions = [...redacted.redactions];
+      ms.pluginBase = redacted.redactedText;
+      refreshPluginBody(ms);
       ms.draft.approved = false;
       // The package changed: any earlier approval or send intent is void.
       intents.delete(slotKey(st.ownerId, ms.title));
@@ -611,6 +738,70 @@ export function createTwinRoom(opts?: {
         text: `${ms.title} source rev ${ms.sourceEdits}`,
       });
       persistSlot(st, ms);
+    },
+
+    /**
+     * Proposed plugin outputs for the selected meeting only. Shown but NOT
+     * in the package. Empty once plugins can no longer run (after takeover
+     * or once the package leaves "unsent").
+     */
+    runPlugins(): PluginOutput[] {
+      const st = active();
+      const ms = selected(st);
+      if (!pluginsRunnable(st, ms)) return [];
+      return runAllPlugins(meetingContextFor(st, ms)).map((o) => ({
+        ...o,
+        lines: [...o.lines],
+      }));
+    },
+
+    /**
+     * Owner includes a proposed output: its redacted section is appended to
+     * the package body (covered by the package hash) and any existing
+     * package approval is cleared exactly like an edit.
+     */
+    approvePluginOutput(id: string): { approved: boolean } {
+      const st = active();
+      const ms = selected(st);
+      if (!pluginsRunnable(st, ms)) return { approved: false };
+      if (!BUILTIN_PLUGINS.some((p) => p.id === id)) return { approved: false };
+      if (ms.pluginSections.some((s) => s.id === id)) return { approved: true };
+      const output = runAllPlugins(meetingContextFor(st, ms)).find(
+        (o) => o.id === id,
+      );
+      if (!output) return { approved: false };
+      ms.pluginSections.push({ id: output.id, text: snapshotPluginOutput(output) });
+      const order = new Map(BUILTIN_PLUGINS.map((p, i) => [p.id, i]));
+      ms.pluginSections.sort(
+        (a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0),
+      );
+      ms.rejectedPlugins = ms.rejectedPlugins.filter((r) => r !== id);
+      refreshPluginBody(ms);
+      clearApprovalForPluginChange(st, ms);
+      persistSlot(st, ms);
+      return { approved: true };
+    },
+
+    /**
+     * Owner excludes a proposed output. Removing an already-included output
+     * changes the package, so it clears any existing package approval
+     * exactly like an edit; excluding a never-approved output only records
+     * the choice and never touches the package.
+     */
+    rejectPluginOutput(id: string): { rejected: boolean } {
+      const st = active();
+      const ms = selected(st);
+      if (!pluginsRunnable(st, ms)) return { rejected: false };
+      if (!BUILTIN_PLUGINS.some((p) => p.id === id)) return { rejected: false };
+      const idx = ms.pluginSections.findIndex((s) => s.id === id);
+      if (idx >= 0) {
+        ms.pluginSections.splice(idx, 1);
+        refreshPluginBody(ms);
+        clearApprovalForPluginChange(st, ms);
+      }
+      if (!ms.rejectedPlugins.includes(id)) ms.rejectedPlugins.push(id);
+      persistSlot(st, ms);
+      return { rejected: true };
     },
 
     async send(): Promise<{ ok: boolean; reason?: string }> {

@@ -91,6 +91,7 @@ export default function MeetingRoom() {
 
   const mailto = room.mailtoHref();
   const evidence = room.evidenceRecord();
+  const pluginsLocked = v.twinStatus !== "active" || v.draft.sendState !== "unsent";
 
   return (
     <div className="space-y-6">
@@ -291,6 +292,71 @@ export default function MeetingRoom() {
               <li key={i}>{n}</li>
             ))}
           </ul>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Plugins</CardTitle>
+          <CardDescription>
+            Synthetic local-only helpers. Proposed outputs are excluded from the package
+            until the owner includes them.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {pluginsLocked && (
+            <p className="text-sm text-muted-foreground">
+              Plugins cannot run after takeover or once the package is sent, locked,
+              cancelled, or unconfirmed.
+            </p>
+          )}
+          {v.plugins.map((p) => (
+            <div key={p.id} className="space-y-2 rounded-md border p-3">
+              <p className="text-sm font-medium">{p.label}</p>
+              <p className="text-sm text-muted-foreground">
+                {p.status === "approved"
+                  ? "Included in the package."
+                  : p.status === "rejected"
+                    ? "Excluded by the owner."
+                    : "Proposed — excluded from the package until the owner includes it."}
+              </p>
+              {p.lines.length > 0 && (
+                <pre className="whitespace-pre-wrap rounded-md bg-muted p-3 text-sm">
+                  {p.title}
+                  {"\n"}
+                  {p.lines.join("\n")}
+                </pre>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  aria-label={`Include plugin output ${p.id}`}
+                  disabled={pluginsLocked}
+                  onClick={() => {
+                    room.approvePluginOutput(p.id);
+                    setDraftText(room.view().draft.body);
+                    refresh();
+                  }}
+                >
+                  Include
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  aria-label={`Exclude plugin output ${p.id}`}
+                  disabled={pluginsLocked}
+                  onClick={() => {
+                    room.rejectPluginOutput(p.id);
+                    setDraftText(room.view().draft.body);
+                    refresh();
+                  }}
+                >
+                  Exclude
+                </Button>
+              </div>
+            </div>
+          ))}
         </CardContent>
       </Card>
 

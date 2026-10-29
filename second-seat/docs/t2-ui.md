@@ -135,6 +135,24 @@ approves an exact follow-up package. All data is invented; nothing is real.
   body and approved body were rewritten consistently but whose stored hashes
   are stale still loads as not approved.
 
+## What is shown (continued)
+
+- **T12 owner-gated plugins.** A "Plugins" panel lists two synthetic local-only
+  plugins (`packages/core/src/t2/plugins.ts`: `action-items`, which extracts
+  action items from the selected meeting's scripted transcript/notes, and
+  `calendar-followup`, which proposes a follow-up slot as plain text with a
+  fixed made-up date/time derived from the meeting — no network, no real
+  calendar, no `.ics`). `runPlugins()` produces PROPOSED outputs from the
+  selected meeting's context only; they are shown with Include / Exclude
+  buttons and are clearly marked excluded until the owner includes them. The
+  owner includes with `approvePluginOutput(id)` or excludes with
+  `rejectPluginOutput(id)`; only included outputs are appended (redacted like
+  the draft) to the package body and covered by its sha256. Including or
+  removing an output clears any existing package approval exactly like an
+  edit. Plugins cannot run or change anything after takeover or once the
+  package is sent/locked/cancelled/unconfirmed. Include/exclude state persists
+  through the existing store so a reload keeps it.
+
 ## Not built / follow-ups
 
 - Real authenticated server-side connector route (needed before any real send;
