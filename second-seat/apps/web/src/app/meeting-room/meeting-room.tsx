@@ -420,6 +420,12 @@ export default function MeetingRoom() {
                   {p.lines.join("\n")}
                 </pre>
               )}
+              {p.status === "approved" && p.snapshotAt !== null && (
+                <p className="text-sm text-muted-foreground">
+                  Snapshot from {new Date(p.snapshotAt).toISOString()}
+                  {p.stale ? " — newer lines available" : ""}
+                </p>
+              )}
               <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
@@ -447,6 +453,21 @@ export default function MeetingRoom() {
                 >
                   Exclude
                 </Button>
+                {p.status === "approved" && p.stale && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    aria-label={`Refresh plugin snapshot ${p.id}`}
+                    disabled={pluginsLocked}
+                    onClick={() => {
+                      room.refreshPluginOutput(p.id);
+                      setDraftText(room.view().draft.body);
+                      refresh();
+                    }}
+                  >
+                    Refresh
+                  </Button>
+                )}
               </div>
             </div>
           ))}

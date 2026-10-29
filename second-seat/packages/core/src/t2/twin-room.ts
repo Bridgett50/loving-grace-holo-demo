@@ -36,9 +36,11 @@ import {
 import {
   loadPersistedDraft,
   loadTakeover,
+  loadTakeoverEvents,
   roomStoreKey,
   savePersistedDraft,
   saveTakeover,
+  saveTakeoverEvents,
   type PersistedDraft,
   type RoomStore,
   type SendIntent,
@@ -89,6 +91,16 @@ export type TwinRoomView = {
     readonly title: string;
     readonly lines: readonly string[];
     readonly status: "proposed" | "approved" | "rejected";
+    /**
+     * Included-snapshot metadata (null while the output is not included).
+     * An included section is a frozen snapshot: `snapshotText` never
+     * changes silently, and `stale` reports whether the live output now
+     * differs from it.
+     */
+    readonly snapshotAt: number | null;
+    readonly snapshotTranscriptLen: number | null;
+    readonly snapshotText: string | null;
+    readonly stale: boolean;
   }>;
 };
 
@@ -121,13 +133,23 @@ type MeetingState = {
   draft: DraftState;
   /** Editable package part (redacted); approved plugin sections append after it. */
   pluginBase: string;
-  /** Owner-included plugin sections (redacted snapshots), in display order. */
-  pluginSections: Array<{ readonly id: string; readonly text: string }>;
+  /**
+   * Owner-included plugin sections (redacted snapshots), in display order.
+   * Each entry is frozen at include/refresh time: later streamed lines
+   * never rewrite it. `snapshotAt` is the room clock at snapshot time and
+   * `transcriptLen` the transcript length it was built from.
+   */
+  pluginSections: PluginSection[];
   /** Owner-excluded plugin ids for the selected meeting. */
   rejectedPlugins: string[];
 };
 
-export type PluginSection = { readonly id: string; readonly text: string };
+export type PluginSection = {
+  readonly id: string;
+  readonly text: string;
+  readonly snapshotAt: number;
+  readonly transcriptLen: number;
+};
 
 type OwnerState = {
   principal: OwnerPrincipal;
@@ -333,7 +355,7 @@ export function createTwinRoom(opts?: {
    */
   function composePluginBody(
     base: string,
-    sections: ReadonlyArray<{ readonly id: string; readonly text: string }>,
+    sections: ReadonlyArray<PluginSection>,
   ): { body: string; redactions: CategoryRedactions[] } {
     let combined = base;
     for (const s of sections) combined += s.text;
@@ -397,7 +419,12 @@ export function createTwinRoom(opts?: {
         d.approved && d.approvedBody !== null ? packageHash(d.approvedBody) : null,
       approved: d.approved,
       pluginBase: ms.pluginBase,
-      pluginSections: ms.pluginSections.map((s) => ({ id: s.id, text: s.text })),
+      pluginSections: ms.pluginSections.map((s) => ({
+        id: s.id,
+        text: s.text,
+        snapshotAt: s.snapshotAt,
+        transcriptLen: s.transcriptLen,
+      })),
       pluginRejected: [...ms.rejectedPlugins],
       // "unconfirmed" is the live view of a persisted pending intent; the
       // stored send state stays "unsent" so the pair keeps validating.
@@ -444,15 +471,24 @@ export function createTwinRoom(opts?: {
   // null and keeps the fresh unapproved default (never approved/sendable).
   if (store !== null) {
     for (const st of owners.values()) {
-      if (loadTakeover(store, st.ownerId)) {
+      // Durable pre-approval takeover: the paused flag and every takeover
+      // event (timestamp + meeting) persist per owner through the room
+      // store, independent of approval. The reloaded room stays paused via
+      // the room-level flag (no proactive answers, no plugins, no sends);
+      // the fresh connector sessions are deliberately left live so the
+      // owner can later approve the frozen package, at which point the
+      // rehydrated pending events merge into the evidence record exactly
+      // once. Reloads never rewrite the events key, so repeated reloads
+      // cannot duplicate them.
+      const durableTakeovers = loadTakeoverEvents(store, st.ownerId);
+      if (loadTakeover(store, st.ownerId) || durableTakeovers.length > 0) {
         st.takenOver = true;
-        for (const m of st.meetings) {
-          try {
-            connector.takeover(st.principal, m.generationId);
-          } catch {
-            // Already taken over; keep the persisted flag either way.
-          }
-        }
+      }
+      for (const ms of st.meetings) {
+        const forMeeting = durableTakeovers
+          .filter((e) => e.meetingTitle === ms.title)
+          .map((e) => ({ at: e.at, kind: "takeover" as const }));
+        if (forMeeting.length > 0) evidence.importTakeovers(ms.meetingId, forMeeting);
       }
       for (const ms of st.meetings) {
         const loaded = loadPersistedDraft(store, st.ownerId, ms.title);
@@ -475,9 +511,16 @@ export function createTwinRoom(opts?: {
         ms.pluginSections = saved.pluginSections.map((s) => ({
           id: s.id,
           text: s.text,
+          snapshotAt: s.snapshotAt,
+          transcriptLen: s.transcriptLen,
         }));
         ms.rejectedPlugins = [...saved.pluginRejected];
-        if (saved.evidence !== null) evidence.restore(saved.evidence);
+        // Re-key the restored record to this room's meeting id: connector
+        // meeting ids are per-room random, so the persisted record's id is
+        // stale after a reload while the title still names the same meeting.
+        if (saved.evidence !== null) {
+          evidence.restore({ ...saved.evidence, meetingId: ms.meetingId });
+        }
         if (
           saved.approved &&
           saved.approvedBody !== null &&
@@ -559,9 +602,11 @@ export function createTwinRoom(opts?: {
       const ready = exportReady(st, ms);
       // Proposed outputs are computed only while plugins may run; after
       // takeover or once the package leaves "unsent" nothing is proposed.
-      const proposed = pluginsRunnable(st, ms)
-        ? runActivePlugins(meetingContextFor(st, ms))
-        : [];
+      // The live outputs are still computed for staleness: an included
+      // section is a frozen snapshot that never changes silently, so the
+      // view reports whether live output now differs from it.
+      const live = runActivePlugins(meetingContextFor(st, ms));
+      const proposed = pluginsRunnable(st, ms) ? live : [];
       return {
         ownerId: st.ownerId,
         ownerName: st.ownerName,
@@ -585,17 +630,31 @@ export function createTwinRoom(opts?: {
         notes: [NOTE_F2, NOTE_F3],
         plugins: activePlugins.map((p) => {
           const output = proposed.find((o) => o.id === p.id);
-          const status = ms.pluginSections.some((s) => s.id === p.id)
-            ? ("approved" as const)
-            : ms.rejectedPlugins.includes(p.id)
-              ? ("rejected" as const)
-              : ("proposed" as const);
+          const section = ms.pluginSections.find((s) => s.id === p.id) ?? null;
+          const status =
+            section !== null
+              ? ("approved" as const)
+              : ms.rejectedPlugins.includes(p.id)
+                ? ("rejected" as const)
+                : ("proposed" as const);
+          // Staleness compares the CURRENT live output (redacted, exactly
+          // as a snapshot would be built) against the frozen included
+          // snapshot. Never-included outputs are never stale.
+          const liveOutput = live.find((o) => o.id === p.id) ?? null;
+          const stale =
+            section !== null &&
+            liveOutput !== null &&
+            snapshotPluginOutput(liveOutput) !== section.text;
           return {
             id: p.id,
             label: p.label,
             title: output ? output.title : "",
             lines: output ? [...output.lines] : [],
             status,
+            snapshotAt: section !== null ? section.snapshotAt : null,
+            snapshotTranscriptLen: section !== null ? section.transcriptLen : null,
+            snapshotText: section !== null ? section.text : null,
+            stale,
           };
         }),
       };
@@ -647,6 +706,9 @@ export function createTwinRoom(opts?: {
 
     staleLineAttempt(): { appended: boolean } {
       const st = active();
+      // Paused rooms refuse stale lines at the room level too (reloaded
+      // rooms keep live connector sessions so a later approval can rebind).
+      if (st.takenOver) return { appended: false };
       const ms = selected(st);
       const other = st.meetings.find((m) => m.meetingId !== ms.meetingId);
       const foreignId = other ? other.meetingId : "no-such-meeting";
@@ -679,9 +741,25 @@ export function createTwinRoom(opts?: {
       // Events for meetings without a record yet are kept pending and merged
       // into the record when that meeting is approved; events for meetings
       // with a record are appended to the record too.
-      for (const m of st.meetings) evidence.logTakeover(m.meetingId);
+      // Evidence only: log a takeover event per meeting and persist each
+      // one with its room-clock timestamp and meeting (by stable title),
+      // appended after earlier events so the full pre-approval history
+      // survives reloads in order, independent of approval.
+      const logged = st.meetings.map((m) => ({
+        title: m.title,
+        event: evidence.logTakeover(m.meetingId),
+      }));
       if (store !== null) {
         saveTakeover(store, st.ownerId, true);
+        const previous = loadTakeoverEvents(store, st.ownerId);
+        saveTakeoverEvents(store, st.ownerId, [
+          ...previous,
+          ...logged.map((l) => ({
+            at: l.event.at,
+            kind: "takeover" as const,
+            meetingTitle: l.title,
+          })),
+        ]);
         for (const m of st.meetings) persistSlot(st, m);
       }
     },
@@ -782,7 +860,12 @@ export function createTwinRoom(opts?: {
         (o) => o.id === id,
       );
       if (!output) return { approved: false };
-      ms.pluginSections.push({ id: output.id, text: snapshotPluginOutput(output) });
+      ms.pluginSections.push({
+        id: output.id,
+        text: snapshotPluginOutput(output),
+        snapshotAt: clock(),
+        transcriptLen: ms.transcript.length,
+      });
       const order = new Map(activePlugins.map((p, i) => [p.id, i]));
       ms.pluginSections.sort(
         (a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0),
@@ -814,6 +897,41 @@ export function createTwinRoom(opts?: {
       if (!ms.rejectedPlugins.includes(id)) ms.rejectedPlugins.push(id);
       persistSlot(st, ms);
       return { rejected: true };
+    },
+
+    /**
+     * Owner re-snapshots an included plugin output from the CURRENT live
+     * output. The snapshot is explicit: it changes the package and clears
+     * any existing package approval exactly like an edit. Refused after
+     * takeover or once the send state leaves `unsent`; refused for unknown
+     * or never-included ids. The included snapshot never changes any other
+     * way (streaming lines cannot rewrite it).
+     */
+    refreshPluginOutput(id: string): { refreshed: boolean } {
+      const st = active();
+      const ms = selected(st);
+      if (!pluginsRunnable(st, ms)) return { refreshed: false };
+      if (!activePlugins.some((p) => p.id === id)) return { refreshed: false };
+      const idx = ms.pluginSections.findIndex((s) => s.id === id);
+      if (idx < 0) return { refreshed: false };
+      const output = runActivePlugins(meetingContextFor(st, ms)).find(
+        (o) => o.id === id,
+      );
+      if (!output) return { refreshed: false };
+      ms.pluginSections[idx] = {
+        id: output.id,
+        text: snapshotPluginOutput(output),
+        snapshotAt: clock(),
+        transcriptLen: ms.transcript.length,
+      };
+      const order = new Map(activePlugins.map((p, i) => [p.id, i]));
+      ms.pluginSections.sort(
+        (a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0),
+      );
+      refreshPluginBody(ms);
+      clearApprovalForPluginChange(st, ms);
+      persistSlot(st, ms);
+      return { refreshed: true };
     },
 
     async send(): Promise<{ ok: boolean; reason?: string }> {

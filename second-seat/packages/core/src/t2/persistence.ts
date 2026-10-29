@@ -102,6 +102,27 @@ export type PersistedSendState = "unsent" | "sent" | "failed" | "cancelled";
 export interface PersistedPluginSection {
   readonly id: string;
   readonly text: string;
+  /**
+   * Room-clock time the snapshot was taken (include or refresh). Records
+   * written before snapshots carried metadata load as `0`.
+   */
+  readonly snapshotAt: number;
+  /**
+   * Transcript length the snapshot was built from. Records written before
+   * snapshots carried metadata load as `0`.
+   */
+  readonly transcriptLen: number;
+}
+
+/**
+ * A durable per-owner takeover event. `meetingTitle` (stable across
+ * reloads) names the meeting; per-room connector meeting ids do not
+ * survive a reload, so they are never persisted here.
+ */
+export interface PersistedTakeoverEvent {
+  readonly at: number;
+  readonly kind: "takeover";
+  readonly meetingTitle: string;
 }
 
 /** Everything the room persists per owner + meeting. */
@@ -144,6 +165,11 @@ export function roomStoreKey(ownerId: string, meetingTitle: string): string {
 /** Stable store key for the per-owner takeover flag. */
 export function roomTakeoverKey(ownerId: string): string {
   return `v1/${ownerId}/takeover`;
+}
+
+/** Stable store key for the per-owner durable takeover events. */
+export function roomTakeoverEventsKey(ownerId: string): string {
+  return `v1/${ownerId}/takeover-events`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -258,7 +284,28 @@ export function loadPersistedDraft(
       ) {
         return null;
       }
-      pluginSections.push({ id: entry["id"], text: entry["text"] });
+      // Snapshot metadata is required on new writes but optional when
+      // reading: records written before snapshots carried metadata load
+      // with `0` instead of failing closed. Present-but-malformed metadata
+      // still fails closed.
+      let snapshotAt = 0;
+      let transcriptLen = 0;
+      if (entry["snapshotAt"] !== undefined || entry["transcriptLen"] !== undefined) {
+        if (
+          typeof entry["snapshotAt"] !== "number" ||
+          typeof entry["transcriptLen"] !== "number"
+        ) {
+          return null;
+        }
+        snapshotAt = entry["snapshotAt"];
+        transcriptLen = entry["transcriptLen"];
+      }
+      pluginSections.push({
+        id: entry["id"],
+        text: entry["text"],
+        snapshotAt,
+        transcriptLen,
+      });
     }
   }
   let pluginRejected: string[] = [];
@@ -366,6 +413,61 @@ export function saveTakeover(
 ): void {
   try {
     store.set(roomTakeoverKey(ownerId), JSON.stringify({ takenOver }));
+  } catch {
+    // Best-effort only.
+  }
+}
+
+/**
+ * Load the durable per-owner takeover events, in stored order. Returns an
+ * empty list when nothing was stored or the stored value is corrupt
+ * (callers keep the persisted flag as the paused-state source of truth).
+ */
+export function loadTakeoverEvents(
+  store: RoomStore,
+  ownerId: string,
+): PersistedTakeoverEvent[] {
+  let raw: string | null;
+  try {
+    raw = store.get(roomTakeoverEventsKey(ownerId));
+  } catch {
+    return [];
+  }
+  if (raw === null) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  const events: PersistedTakeoverEvent[] = [];
+  for (const entry of parsed) {
+    if (
+      !isRecord(entry) ||
+      typeof entry["at"] !== "number" ||
+      entry["kind"] !== "takeover" ||
+      typeof entry["meetingTitle"] !== "string"
+    ) {
+      return [];
+    }
+    events.push({
+      at: entry["at"],
+      kind: "takeover",
+      meetingTitle: entry["meetingTitle"],
+    });
+  }
+  return events;
+}
+
+/** Persist the per-owner takeover events, in order (best-effort). */
+export function saveTakeoverEvents(
+  store: RoomStore,
+  ownerId: string,
+  events: readonly PersistedTakeoverEvent[],
+): void {
+  try {
+    store.set(roomTakeoverEventsKey(ownerId), JSON.stringify([...events]));
   } catch {
     // Best-effort only.
   }

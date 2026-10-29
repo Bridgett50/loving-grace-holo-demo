@@ -119,8 +119,11 @@ approves an exact follow-up package. All data is invented; nothing is real.
   intent/state mixes) fails closed to unapproved/unsendable. The meeting
   room uses the `localStorage` store and shows a "Restored from this
   browser's local storage" note plus the unconfirmed alert when applicable.
-  Pre-approval takeover events (pending, no record yet) are not durable
-  across reloads.
+  Takeover stays durable even before any approval: the paused flag and
+  every takeover event (room-clock timestamp + meeting, per owner) persist
+  through the room store, so a reload keeps the twin paused and a later
+  approval merges the earlier events into the evidence record in order,
+  exactly once.
 
 ## What is shown (continued)
 
@@ -196,6 +199,26 @@ approves an exact follow-up package. All data is invented; nothing is real.
   (`exportEvidenceJson`); the unused `getEvidenceRecord` / `exportEvidence`
   aliases were removed. `evidence.ts` and the `t2`/`core` index files had no
   similar duplicate exports.
+
+## What is shown (continued)
+
+- **T15 durable pre-approval takeover + explicit plugin snapshots.** A
+  takeover before any approval persists per owner through the room store:
+  the paused flag plus one event per meeting (room-clock timestamp +
+  meeting title). After a reload the room is still paused — streamed lines
+  are refused, plugins propose nothing and cannot be included/excluded/
+  refreshed, and sends are refused; nothing is auto-approved or auto-sent.
+  The owner can later approve the frozen package, and that approval merges
+  the earlier takeover events into the evidence record in order, exactly
+  once (reloads never rewrite the events key, so repeated reloads cannot
+  duplicate them). An included plugin section is an explicit snapshot: it
+  records `snapshotAt` (room clock) and the transcript length it was built
+  from, and later streamed lines never rewrite it. The room view exposes
+  per plugin whether live output now differs (`stale`) — the UI shows
+  "Snapshot from \<time\> — newer lines available" with a labelled Refresh
+  button when stale. `refreshPluginOutput(id)` re-snapshots from live
+  output, which changes the package and clears approval like an edit; it is
+  refused after takeover or once the send state leaves `unsent`.
 
 ## Not built / follow-ups
 

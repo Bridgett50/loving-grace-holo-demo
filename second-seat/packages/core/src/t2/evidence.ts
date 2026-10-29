@@ -107,6 +107,14 @@ export interface EvidenceStore {
   }): EvidenceRecord;
   markSent(meetingId: string, sendState: EvidenceSendState): EvidenceRecord | null;
   logTakeover(meetingId: string): TakeoverEvent;
+  /**
+   * Rehydrate durable pre-approval takeover events after a reload: they
+   * join the pending queue for `meetingId` (in order, without duplicates)
+   * so a later `saveApproved` merges them into the evidence record. Saved
+   * records are never touched here, so repeated reloads cannot duplicate
+   * events that are already in a restored record.
+   */
+  importTakeovers(meetingId: string, events: readonly TakeoverEvent[]): void;
   clear(): void;
 }
 
@@ -191,6 +199,24 @@ export function createInMemoryEvidenceStore(opts?: {
         });
       }
       return { ...event };
+    },
+
+    importTakeovers(meetingId: string, events: readonly TakeoverEvent[]): void {
+      const pending = pendingTakeovers.get(meetingId) ?? [];
+      for (const event of events) {
+        if (
+          !event ||
+          typeof event.at !== "number" ||
+          event.kind !== "takeover"
+        ) {
+          continue;
+        }
+        if (pending.some((e) => e.at === event.at && e.kind === event.kind)) {
+          continue;
+        }
+        pending.push({ at: event.at, kind: "takeover" });
+      }
+      pendingTakeovers.set(meetingId, pending);
     },
 
     clear(): void {

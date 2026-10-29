@@ -45,7 +45,11 @@ const ACTION_KEYWORDS =
 function dedupedLines(context: MeetingContext): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
-  for (const line of [...context.script, ...context.transcript]) {
+  // Snapshot semantics: the output is built from the lines streamed so far
+  // only. The full script is deliberately NOT an input — unstreamed lines
+  // are not part of the meeting yet — so later streamed lines change the
+  // live output and mark an included snapshot stale.
+  for (const line of context.transcript) {
     if (typeof line !== "string" || line.length === 0) continue;
     if (seen.has(line)) continue;
     seen.add(line);
