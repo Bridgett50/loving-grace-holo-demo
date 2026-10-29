@@ -9,3 +9,4 @@ export * from "./persistence";
 export * from "./plugins";
 export * from "./twin-room";
 export * from "./a11y";
+export * from "./test-mode-gate";

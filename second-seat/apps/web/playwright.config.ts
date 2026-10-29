@@ -16,6 +16,8 @@ export default defineConfig({
     command: "pnpm exec next dev -p 4310 -H 127.0.0.1",
     url: "http://localhost:4310/meeting-room",
     reuseExistingServer: false,
+    // Opt in to the fake send transport; the page also requires a loopback host.
+    env: { SECOND_SEAT_TEST_MODE: "1" },
     timeout: 180_000,
   },
 });

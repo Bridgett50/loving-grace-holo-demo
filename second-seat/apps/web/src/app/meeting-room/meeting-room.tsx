@@ -28,10 +28,12 @@ function subscribeToNothing(): () => void {
   return () => {};
 }
 
-export default function MeetingRoom() {
+export default function MeetingRoom({ testMode }: { testMode: boolean }) {
+  // testMode comes from the server-side gate in page.tsx (fakeSendAllowed):
+  // sends are only enabled for SECOND_SEAT_TEST_MODE=1 on a loopback host.
   const [room] = useState<TwinRoom>(() =>
     createTwinRoom({
-      testMode: true,
+      testMode,
       transport: async () => {},
       store: createLocalStorageRoomStore(),
     }),
@@ -434,8 +436,12 @@ export default function MeetingRoom() {
           <CardContent className="space-y-3">
             {restored && (
               <p className="text-sm text-muted-foreground">
-                Restored from this browser&apos;s local storage (draft, approval, and send state survive reloads).
+                Restored from this browser&apos;s local storage (draft and send state survive reloads; approval
+                never does).
               </p>
+            )}
+            {room.approvalNote() !== null && (
+              <p className="text-sm font-medium">{room.approvalNote()}</p>
             )}
             {v.draft.sendState === "unconfirmed" && (
               <p role="alert" className="text-sm font-medium text-destructive">

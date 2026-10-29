@@ -109,9 +109,9 @@ approves an exact follow-up package. All data is invented; nothing is real.
   SEND INTENT. `send()` writes
   `{ meetingId, packageHash, status: "pending" }` BEFORE calling the
   transport, then marks it `sent`/`failed` after. A new room on the same
-  store (= reload) resumes: unapproved drafts restore unapproved; approved
-  unsent packages re-bind connector state internally and send exactly once
-  (only if `packageHash(body)` still equals the persisted approved hash); a
+  store (= reload) resumes: approval is never restored — every reloaded
+  slot reports unapproved until a fresh approve() re-binds connector state
+  internally, then sends exactly once; a
   `pending` intent NEVER auto-resends and refuses manual sends with an
   "unconfirmed — check your outbox" state (`draft.sendState` is
   `"unconfirmed"`); `sent`/`failed` stay terminal and never resend.
@@ -357,6 +357,13 @@ approves an exact follow-up package. All data is invented; nothing is real.
   `webServer` entry). Hydration bug fixed: the demo flag is now read only
   on the client via `useSyncExternalStore` (server snapshot always false),
   so the server HTML and first client render match.
+
+## Review fixes (F1)
+
+- #1 a pending send locks the package (edit/plugin include/exclude/refresh refused, intent never deleted).
+- #2 approval is never restored after a reload (the stored approved fields are not trusted; the UI shows "Approved before reload — approve again."; intent history is kept; evidence guidance events survive the re-approval — the importGuidances bug found while verifying).
+- #3 the fake send transport is enabled only by `SECOND_SEAT_TEST_MODE=1` on a loopback Host / X-Forwarded-Host (otherwise sends are disabled; the Playwright web server sets the flag).
+- #4 takeover survives reload at the room level; connector sessions stay live on purpose so the owner may re-approve the frozen package, and every exit stays refused.
 
 ## Not built / follow-ups
 

@@ -326,7 +326,9 @@ describe("t2 hardening review", () => {
           mailto: false,
           file: false,
         });
-        expect(v.draft.approved, label).toBe(true);
+        // Approval is never restored on reload: a reloaded slot that was
+        // approved before the reload reports unapproved until re-approved.
+        expect(v.draft.approved, label).toBe(room.approvalNote() === null);
       }
       // A stale snapshot is always an included one.
       for (const p of v.plugins) {
@@ -451,6 +453,8 @@ describe("t2 hardening review", () => {
     expect(same).toBeDefined();
     if (same === undefined) throw new Error("expected the reloaded meeting");
     room2.selectMeeting(same.id);
+    // Approval is never restored: re-approve so both rooms share the history.
+    expect(room2.approve().approved).toBe(true);
 
     // Connector meeting ids are per-room random values: normalize them
     // (and only them) before comparing the two views.

@@ -192,7 +192,7 @@ describe("t2 plugins", () => {
     const v = room2.view();
     expect(v.draft.body).toBe(body);
     expect(v.draft.sha256).toBe(packageHash(body));
-    expect(v.draft.approved).toBe(true);
+    expect(v.draft.approved).toBe(false);
     expect(v.draft.body).toContain(proposed[0].title);
     const statuses = Object.fromEntries(
       v.plugins.map((p) => [p.id, p.status] as const),
@@ -202,6 +202,8 @@ describe("t2 plugins", () => {
       expect(v.draft.body).not.toContain(secret);
     }
 
+    // Approval is never restored: a fresh approve() is required to send.
+    expect(room2.approve().approved).toBe(true);
     const res = await room2.send();
     expect(res.ok).toBe(true);
     expect(sent.length).toBe(1);

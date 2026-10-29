@@ -91,6 +91,9 @@ export const CANCELLED_SEND_REASON =
   "Send refused: cancelled by takeover before the transport finished; it will not be retried.";
 export const UNCONFIRMED_SEND_REASON =
   "Send refused: unconfirmed — check your outbox before retrying; the previous attempt may already have sent.";
+export const PENDING_SEND_EDIT_REASON =
+  "Package is locked while a send is pending; it can no longer be edited.";
+export const REAPPROVE_AFTER_RELOAD_NOTE = "Approved before reload — approve again.";
 
 export type TwinRoomView = {
   readonly ownerId: string;
@@ -180,6 +183,8 @@ type MeetingState = {
    */
   guidanceHistory: string[];
   pendingGuidance: PendingGuidance[];
+  /** True when the slot was approved before a reload and not re-approved yet. */
+  reapprovalNeeded: boolean;
   /** Transcript indexes of twin lines rendered with guidance applied. */
   steeredLineIndexes: number[];
   draft: DraftState;
@@ -357,6 +362,7 @@ export function createTwinRoom(opts?: {
         sourceEdits: 0,
         guidanceHistory: [],
         pendingGuidance: [],
+        reapprovalNeeded: false,
         steeredLineIndexes: [],
         draft: {
           body: redacted.redactedText,
@@ -441,6 +447,15 @@ export function createTwinRoom(opts?: {
     const composed = composePluginBody(ms.pluginBase, ms.pluginSections);
     ms.draft.body = composed.body;
     ms.draft.redactions = composed.redactions;
+  }
+
+  /**
+   * True while the slot's durable send intent is pending (a send is in
+   * flight, or a reloaded attempt is unconfirmed). The package must not
+   * change and the intent must never be deleted while it is pending.
+   */
+  function sendPending(st: OwnerState, ms: MeetingState): boolean {
+    return intents.get(slotKey(st.ownerId, ms.title))?.status === "pending";
   }
 
   /**
@@ -581,6 +596,10 @@ export function createTwinRoom(opts?: {
       // rehydrated pending events merge into the evidence record exactly
       // once. Reloads never rewrite the events key, so repeated reloads
       // cannot duplicate them.
+      // Review #4 (intended): the connector sessions are NOT taken over on
+      // reload, so the owner may re-approve the frozen package; every exit
+      // (send, copy, mailto, file) is still refused by the room-level
+      // takeover flag (see F1-4).
       const durableTakeovers = loadTakeoverEvents(store, st.ownerId);
       if (loadTakeover(store, st.ownerId) || durableTakeovers.length > 0) {
         st.takenOver = true;
@@ -657,32 +676,21 @@ export function createTwinRoom(opts?: {
           saved.intent !== null
             ? { ...saved.intent, meetingId: ms.meetingId }
             : null;
-        if (
-          saved.approved &&
-          saved.approvedBody !== null &&
-          !st.takenOver &&
-          rebindApproved(st, ms, saved.approvedBody)
-        ) {
-          if (rekeyedIntent !== null) {
-            intents.set(slotKey(st.ownerId, ms.title), rekeyedIntent);
-            ms.draft.sendState =
-              rekeyedIntent.status === "pending" ? "unconfirmed" : rekeyedIntent.status;
-          } else {
-            ms.draft.sendState = saved.sendState;
-          }
-        } else {
-          // No valid approval to resume (for example the owner took over
-          // before the reload): the restored body stays unapproved and
-          // unsendable, but a durable send intent is still restored as
-          // history so "sent"/"failed"/"cancelled" survive the reload and a
-          // pending intent stays "unconfirmed" instead of becoming resendable.
-          ms.draft.approved = false;
-          ms.draft.sendState = "unsent";
-          if (rekeyedIntent !== null) {
-            intents.set(slotKey(st.ownerId, ms.title), rekeyedIntent);
-            ms.draft.sendState =
-              rekeyedIntent.status === "pending" ? "unconfirmed" : rekeyedIntent.status;
-          }
+        // Approval is NEVER restored from the store: the stored approved
+        // body and hashes are self-consistent data anyone with store access
+        // can rewrite, so trusting them would let a hand-edited package
+        // become sendable. The restored body is unapproved ("approved
+        // before reload, approve again") and needs a fresh approve(). A
+        // durable send intent is still restored as history, so
+        // "sent"/"failed"/"cancelled" survive the reload and a pending intent
+        // stays "unconfirmed" instead of becoming resendable.
+        ms.draft.approved = false;
+        ms.draft.sendState = "unsent";
+        if (saved.approved) ms.reapprovalNeeded = true;
+        if (rekeyedIntent !== null) {
+          intents.set(slotKey(st.ownerId, ms.title), rekeyedIntent);
+          ms.draft.sendState =
+            rekeyedIntent.status === "pending" ? "unconfirmed" : rekeyedIntent.status;
         }
         persistSlot(st, ms);
       }
@@ -1008,6 +1016,7 @@ export function createTwinRoom(opts?: {
       }
       const body = ms.draft.body;
       if (!rebindApproved(st, ms, body)) return { approved: false };
+      ms.reapprovalNeeded = false;
       ms.draft.sendState = "unsent";
       // A fresh approval supersedes any earlier send intent for this package.
       intents.delete(slotKey(st.ownerId, ms.title));
@@ -1027,6 +1036,11 @@ export function createTwinRoom(opts?: {
     editDraft(text: string): void {
       const st = active();
       const ms = selected(st);
+      // A package with a pending send is locked too: editing it would
+      // delete the pending intent and re-arm a second send.
+      if (sendPending(st, ms)) {
+        throw new Error(PENDING_SEND_EDIT_REASON);
+      }
       // A sent package is locked: it can no longer be edited.
       if (ms.draft.sendState === "sent") {
         throw new Error("Package is locked after send; it can no longer be edited.");
@@ -1070,6 +1084,7 @@ export function createTwinRoom(opts?: {
     approvePluginOutput(id: string): { approved: boolean } {
       const st = active();
       const ms = selected(st);
+      if (sendPending(st, ms)) return { approved: false };
       if (!pluginsRunnable(st, ms)) return { approved: false };
       if (!activePlugins.some((p) => p.id === id)) return { approved: false };
       if (ms.pluginSections.some((s) => s.id === id)) return { approved: true };
@@ -1103,6 +1118,7 @@ export function createTwinRoom(opts?: {
     rejectPluginOutput(id: string): { rejected: boolean } {
       const st = active();
       const ms = selected(st);
+      if (sendPending(st, ms)) return { rejected: false };
       if (!pluginsRunnable(st, ms)) return { rejected: false };
       if (!activePlugins.some((p) => p.id === id)) return { rejected: false };
       const idx = ms.pluginSections.findIndex((s) => s.id === id);
@@ -1127,6 +1143,7 @@ export function createTwinRoom(opts?: {
     refreshPluginOutput(id: string): { refreshed: boolean } {
       const st = active();
       const ms = selected(st);
+      if (sendPending(st, ms)) return { refreshed: false };
       if (!pluginsRunnable(st, ms)) return { refreshed: false };
       if (!activePlugins.some((p) => p.id === id)) return { refreshed: false };
       const idx = ms.pluginSections.findIndex((s) => s.id === id);
@@ -1235,6 +1252,15 @@ export function createTwinRoom(opts?: {
     /** True when any meeting slot was rehydrated from the store at creation. */
     restoredFromStore(): boolean {
       return restoredFromPersistence;
+    },
+
+    /**
+     * Shown after a reload for a slot that was approved before it: approval
+     * is never restored, so the owner must approve again. Null otherwise.
+     */
+    approvalNote(): string | null {
+      const st = active();
+      return selected(st).reapprovalNeeded ? REAPPROVE_AFTER_RELOAD_NOTE : null;
     },
 
     evidenceRecord(): EvidenceRecord | null {

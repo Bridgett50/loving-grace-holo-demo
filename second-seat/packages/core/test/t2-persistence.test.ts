@@ -102,10 +102,13 @@ describe("t2 persistence", () => {
     // Reload: drop room1, build room2 on the same store.
     const room2 = createTwinRoom({ testMode: true, transport, store });
     const v = room2.view();
-    expect(v.draft.approved).toBe(true);
+    expect(v.draft.approved).toBe(false);
     expect(v.draft.body).toBe(body);
     expect(v.draft.sha256).toBe(hash);
     expect(v.draft.sha256).toBe(packageHash(body));
+    // Approval is never restored: the reloaded package needs a fresh approve().
+    expect((await room2.send()).ok).toBe(false);
+    expect(room2.approve().approved).toBe(true);
 
     const first = await room2.send();
     expect(first.ok).toBe(true);

@@ -306,8 +306,12 @@ export function createInMemoryEvidenceStore(opts?: {
     },
 
     importGuidances(meetingId: string, events: readonly GuidanceEvent[]): void {
+      // Every imported event joins the pending list, even one the restored
+      // record already holds (exactly like logGuidance), so a re-approval
+      // after a reload (which rebuilds the record from the pending list)
+      // keeps it. The record itself is never appended here, so nothing
+      // appears twice.
       const pending = pendingGuidances.get(meetingId) ?? [];
-      const recorded = records.get(meetingId)?.guidanceEvents ?? [];
       for (const event of events) {
         if (!isGuidanceEvent(event)) continue;
         const candidate: GuidanceEvent = {
@@ -315,7 +319,6 @@ export function createInMemoryEvidenceStore(opts?: {
           redactedGuidance: event.redactedGuidance,
           steeredLineIndex: event.steeredLineIndex,
         };
-        if (recorded.some((e) => sameGuidanceEvent(e, candidate))) continue;
         if (pending.some((e) => sameGuidanceEvent(e, candidate))) continue;
         pending.push(candidate);
       }
