@@ -247,13 +247,41 @@ approves an exact follow-up package. All data is invented; nothing is real.
   "short"/"brief" trim is observable in the steered-line marking and the
   evidence event rather than in changed wording.
 
+## What is shown (continued)
+
+- **T18 headless end-to-end demo script.** `runDemoEndToEnd(opts)`
+  (`packages/core/src/t2/demo-e2e.ts`) parses a `demo=1` query with the
+  same `isDemoMode()` the web page calls on `window.location.search`
+  (default `?demo=1`; any other query refuses with `started: false` and
+  never touches a room), creates a real twin room (in-memory store,
+  injectable clock), and runs every guided step in order through the
+  public demo-mode API (`createDemoController` + `next()` — no internal
+  shortcuts). It returns the steps completed (ids in order), transcript,
+  guidance texts/steered lines/guidance events, package hash, approval/
+  send state, transport calls/bodies, the compare result, the takeover
+  state, the evidence record plus its JSON export, and per-check
+  assertion results. `assertDemoFinalState(state)` returns `{ ok,
+  failures[] }`: every step done once in order with takeover last,
+  package approved before send (evidence `approvedAt <= sentAt`), final
+  `sent` state with exactly one transported body equal to the package,
+  hash equality, evidence present with a takeover event last and the
+  pinned hash, no un-redacted synthetic sensitive value in the
+  transcript/package/evidence JSON, a clean consistent compare result,
+  and a paused twin. `second-seat/scripts/demo-e2e.mjs` runs the
+  committed `test/t2-demo-e2e.test.ts` headlessly through the core
+  package's existing vitest binary (`node
+  second-seat/scripts/demo-e2e.mjs`), printing PASS/FAIL and exiting
+  non-zero on failure. The narrated version is the "Demo walkthrough"
+  section in `second-seat/README.md`.
+
 ## Not built / follow-ups
 
 - Real authenticated server-side connector route (needed before any real send;
   `productionDispatch` stays disabled).
 - Browser e2e/DOM tests (no DOM test framework in this repo; not added).
   The T13 guided demo is covered by a headless core test instead
-  (see above).
+  (see above); T18 adds a headless whole-flow runner plus a script, but
+  still drives core directly, not a real browser DOM.
 - Protection against a store edit that forges the evidence record itself to
   match a forged body (the T14 evidence binding catches stale evidence, not
   fully consistent forgeries).

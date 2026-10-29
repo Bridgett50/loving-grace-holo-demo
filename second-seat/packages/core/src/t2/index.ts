@@ -1,4 +1,5 @@
 export * from "./connector";
+export * from "./demo-e2e";
 export * from "./demo-mode";
 export * from "./email-compare";
 export * from "./guidance";

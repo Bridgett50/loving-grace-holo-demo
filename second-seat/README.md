@@ -76,3 +76,68 @@ Full details are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ## Going beyond demo mode
 
 See [docs/SETUP.md](docs/SETUP.md) to connect real meetings, voice and avatar workers. [docs/PLATFORM_APPROVALS.md](docs/PLATFORM_APPROVALS.md) lists everything that needs paid services or platform approval (Zoom Marketplace, Teams admin consent and more). [docs/LICENSES.md](docs/LICENSES.md) has the license audit.
+
+## Demo walkthrough
+
+A narrated tour of the twin meeting room for recording the demo video. All
+names, meetings, and numbers below are made-up. Local only: no deploy, no
+live meeting, no email is ever sent (sending uses an in-browser test fake).
+
+Start the web app locally and open the guided flow:
+
+```bash
+cd second-seat
+pnpm install
+pnpm dev                  # web on http://localhost:4310
+```
+
+Then open http://localhost:4310/meeting-room?demo=1. The **Guided demo** card
+appears above the room. Press **Next step**, Right arrow, or `N` to advance
+one step at a time (`R` restarts; keys typed into inputs are ignored).
+
+Walk the nine steps in order, saying and showing this at each one:
+
+1. **Join the Q3 launch sync.** Say: "This is a synthetic meeting; my twin
+   joins from my permitted notes only." Show the room view: owner switcher
+   (Bridgett Sanders), twin identity, and the selected meeting title.
+2. **Stream the twin's proactive answer.** Say: "The twin answers live from
+   the scripted transcript." Show the transcript lines appearing.
+3. **Send owner guidance.** Say: "I privately steer the next answer — the
+   guidance never goes to participants or into the package." Show the
+   guidance entry and the steered-line marker.
+4. **Include the action-items plugin output.** Say: "A local plugin proposes
+   action items; I include the proposal into the package." Show the Plugins
+   panel status flipping to included and the package body growing.
+5. **Approve the exact package.** Say: "Approval binds to the sha256 of the
+   exact shown body — editing the draft would clear it." Show the sha256
+   and the approved state.
+6. **Send through the test fake transport.** Say: "Send runs once through a
+   test fake; nothing leaves the browser." Show the sent state and the
+   transport recording exactly one body.
+7. **Compare imported text.** Say: "An imported draft is diffed field by
+   field against the approved package." Show the comparison view with no
+   mismatch flags for the identical round-trip.
+8. **Evidence record.** Say: "Approval and send are saved to an evidence
+   record with redaction metadata." Show the Evidence record card (hash,
+   times, principal, redactions, takeover events) and the Export evidence
+   JSON download.
+9. **Take over.** Say: "I take the seat; the twin pauses and new lines are
+   refused." Show the paused status and the refusal reason on the next
+   streamed line.
+
+The keyboard shortcut is Right arrow / `N` for next and `R` for restart.
+The owner-guidance moment is step 3 (private steering, marked in the
+transcript and logged redacted in the evidence record); the takeover moment
+is step 9 and always comes last (the twin pauses, and streaming, plugins,
+approval, and sending are refused afterwards). The compare/evidence view is
+steps 7–8 (clean field-by-field comparison, then the exportable record).
+
+Run the same flow headlessly any time (no browser needed):
+
+```bash
+node second-seat/scripts/demo-e2e.mjs
+```
+
+It drives every guided step against a real twin room through the public
+demo-mode API, checks the documented end state, prints a short PASS/FAIL
+summary, and exits non-zero on failure.
