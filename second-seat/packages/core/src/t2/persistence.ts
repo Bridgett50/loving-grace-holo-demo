@@ -300,6 +300,12 @@ export function loadPersistedDraft(
     if (packageHash(parsed["approvedBody"]) !== parsed["approvedHash"]) return null;
     if (parsed["approvedHash"] !== parsed["bodyHash"]) return null;
     if (intent !== null && intent.packageHash !== parsed["approvedHash"]) return null;
+    // The approval must be bound to the evidence record written at approve
+    // time: recomputing the stored hashes around a forged body cannot mint
+    // a connector approval, so a record whose evidence still pins a
+    // different package hash fails closed to unapproved/unsendable.
+    if (evidence === null) return null;
+    if (evidence.packageHash !== parsed["approvedHash"]) return null;
   }
 
   return {

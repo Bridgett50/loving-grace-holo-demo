@@ -24,9 +24,9 @@ import { redactPackageText, type CategoryRedactions } from "./redaction";
 import {
   BUILTIN_PLUGINS,
   renderPluginOutput,
-  runAllPlugins,
   type MeetingContext,
   type PluginOutput,
+  type TwinPlugin,
 } from "./plugins";
 import {
   createInMemoryEvidenceStore,
@@ -238,8 +238,15 @@ export function createTwinRoom(opts?: {
   testMode?: boolean;
   now?: () => number;
   store?: RoomStore;
+  /**
+   * Test-only plugin injection: the room runs these plugins instead of the
+   * built-ins. Defaults to `BUILTIN_PLUGINS`, so built-in behaviour is
+   * unchanged when the option is omitted.
+   */
+  plugins?: readonly TwinPlugin[];
 }) {
   const testMode = opts?.testMode ?? false;
+  const activePlugins: readonly TwinPlugin[] = opts?.plugins ?? BUILTIN_PLUGINS;
   const userTransport = opts?.transport;
   const clock = opts?.now ?? (() => Date.now());
   const connector = createMeetingConnector();
@@ -304,6 +311,11 @@ export function createTwinRoom(opts?: {
   }
   function slotKey(ownerId: string, meetingTitle: string): string {
     return roomStoreKey(ownerId, meetingTitle);
+  }
+
+  /** Run the room's plugins (built-ins by default) against one meeting. */
+  function runActivePlugins(context: MeetingContext): PluginOutput[] {
+    return activePlugins.map((plugin) => plugin.run(context));
   }
 
   /**
@@ -548,7 +560,7 @@ export function createTwinRoom(opts?: {
       // Proposed outputs are computed only while plugins may run; after
       // takeover or once the package leaves "unsent" nothing is proposed.
       const proposed = pluginsRunnable(st, ms)
-        ? runAllPlugins(meetingContextFor(st, ms))
+        ? runActivePlugins(meetingContextFor(st, ms))
         : [];
       return {
         ownerId: st.ownerId,
@@ -571,7 +583,7 @@ export function createTwinRoom(opts?: {
         refusal: st.refusal,
         exportInventory: { copy: ready, mailto: ready, file: ready },
         notes: [NOTE_F2, NOTE_F3],
-        plugins: BUILTIN_PLUGINS.map((p) => {
+        plugins: activePlugins.map((p) => {
           const output = proposed.find((o) => o.id === p.id);
           const status = ms.pluginSections.some((s) => s.id === p.id)
             ? ("approved" as const)
@@ -749,7 +761,7 @@ export function createTwinRoom(opts?: {
       const st = active();
       const ms = selected(st);
       if (!pluginsRunnable(st, ms)) return [];
-      return runAllPlugins(meetingContextFor(st, ms)).map((o) => ({
+      return runActivePlugins(meetingContextFor(st, ms)).map((o) => ({
         ...o,
         lines: [...o.lines],
       }));
@@ -764,14 +776,14 @@ export function createTwinRoom(opts?: {
       const st = active();
       const ms = selected(st);
       if (!pluginsRunnable(st, ms)) return { approved: false };
-      if (!BUILTIN_PLUGINS.some((p) => p.id === id)) return { approved: false };
+      if (!activePlugins.some((p) => p.id === id)) return { approved: false };
       if (ms.pluginSections.some((s) => s.id === id)) return { approved: true };
-      const output = runAllPlugins(meetingContextFor(st, ms)).find(
+      const output = runActivePlugins(meetingContextFor(st, ms)).find(
         (o) => o.id === id,
       );
       if (!output) return { approved: false };
       ms.pluginSections.push({ id: output.id, text: snapshotPluginOutput(output) });
-      const order = new Map(BUILTIN_PLUGINS.map((p, i) => [p.id, i]));
+      const order = new Map(activePlugins.map((p, i) => [p.id, i]));
       ms.pluginSections.sort(
         (a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0),
       );
@@ -792,7 +804,7 @@ export function createTwinRoom(opts?: {
       const st = active();
       const ms = selected(st);
       if (!pluginsRunnable(st, ms)) return { rejected: false };
-      if (!BUILTIN_PLUGINS.some((p) => p.id === id)) return { rejected: false };
+      if (!activePlugins.some((p) => p.id === id)) return { rejected: false };
       const idx = ms.pluginSections.findIndex((s) => s.id === id);
       if (idx >= 0) {
         ms.pluginSections.splice(idx, 1);
@@ -895,18 +907,7 @@ export function createTwinRoom(opts?: {
       return evidence.get(selected(st).meetingId);
     },
 
-    getEvidenceRecord(): EvidenceRecord | null {
-      const st = active();
-      return evidence.get(selected(st).meetingId);
-    },
-
     exportEvidenceJson(): string | null {
-      const st = active();
-      const record = evidence.get(selected(st).meetingId);
-      return record === null ? null : exportEvidenceJson(record);
-    },
-
-    exportEvidence(): string | null {
       const st = active();
       const record = evidence.get(selected(st).meetingId);
       return record === null ? null : exportEvidenceJson(record);

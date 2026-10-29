@@ -179,6 +179,24 @@ approves an exact follow-up package. All data is invented; nothing is real.
   comparison step therefore rebuilds the approved package from the exact
   sent body and diffs with the same pure comparison the room uses.
 
+## What is shown (continued)
+
+- **T14 review-gap closes.** `createTwinRoom` accepts a test-only `plugins`
+  option (defaults to the built-ins, so built-in behaviour is unchanged) so a
+  synthetic plugin carrying invented email/phone/amount values proves
+  plugin-output masking end to end: the raw proposal is shown, but the
+  included section, package body, package hash input, transport body, and
+  exported file carry only redaction placeholders. A persisted slot whose
+  body and approved body were rewritten together with stale hashes still
+  loads as not approved; a slot whose hashes were also recomputed is still
+  rejected unless its evidence record pins the same package hash (a forged
+  body has no connector approval, so the reload re-bind finds no matching
+  evidence and stays unapproved/unsendable). The room exposes a single
+  evidence record accessor (`evidenceRecord`) and a single evidence export
+  (`exportEvidenceJson`); the unused `getEvidenceRecord` / `exportEvidence`
+  aliases were removed. `evidence.ts` and the `t2`/`core` index files had no
+  similar duplicate exports.
+
 ## Not built / follow-ups
 
 - Real authenticated server-side connector route (needed before any real send;
@@ -186,5 +204,8 @@ approves an exact follow-up package. All data is invented; nothing is real.
 - Browser e2e/DOM tests (no DOM test framework in this repo; not added).
   The T13 guided demo is covered by a headless core test instead
   (see above).
+- Protection against a store edit that forges the evidence record itself to
+  match a forged body (the T14 evidence binding catches stale evidence, not
+  fully consistent forgeries).
 
 No real email, conferencing, or model behaviour is claimed anywhere here.
