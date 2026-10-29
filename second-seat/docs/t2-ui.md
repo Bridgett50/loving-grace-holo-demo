@@ -378,7 +378,8 @@ approves an exact follow-up package. All data is invented; nothing is real.
 
 ## Review fixes (R)
 
-- R-1 a second send while the first is still pending is refused as unconfirmed (tested); the connector-refused branch clears only the intent that call wrote.
+- R-1 a second send while the first is still pending is refused as unconfirmed (tested); if the connector refuses, the send puts back the intent that was there before it (or clears it when there was none) (Q-1).
+- Q-1 mutation check: with the pending guard removed, the R-1 scenario still keeps sendIntent() pending, a reload on the same store shows "unconfirmed", editDraft throws, and the transport runs once. This holds with the Q-1 fix and fails with the old delete.
 - R-2 the reapproval note reads "Approval doesn't survive a reload. Review the text below, then approve again."
 - R-3 T19-5 asserts reloaded slots that were approved before the reload are unapproved until re-approved.
 

@@ -1219,9 +1219,12 @@ export function createTwinRoom(opts?: {
         });
         if (!ran.ran) {
           // The connector refused before the transport ran, so nothing was
-          // sent: clear only this call's own intent and stay unsent (a later
-          // send may retry).
-          if (intents.get(key) === pendingIntent) intents.delete(key);
+          // sent by THIS call: put back the intent that was there before it
+          // (or clear it when there was none) and stay unsent (Q-1).
+          if (intents.get(key) === pendingIntent) {
+            if (intent !== null) intents.set(key, intent);
+            else intents.delete(key);
+          }
           persistSlot(st, ms);
           return { ok: false, reason: SEND_CONNECTOR_REFUSED_REASON };
         }
