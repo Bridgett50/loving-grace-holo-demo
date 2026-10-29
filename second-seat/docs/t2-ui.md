@@ -85,6 +85,29 @@ approves an exact follow-up package. All data is invented; nothing is real.
   file (Blob + object URL, no network); `exportEvidenceJson()` emits stable,
   pretty JSON.
 
+## What is shown (continued)
+
+- **T10 durable send intent + persistence.** The room accepts a synchronous
+  key-value `RoomStore` (`packages/core/src/t2/persistence.ts`: in-memory
+  store for tests, guarded `localStorage` adapter for the web UI). Per
+  owner + meeting it persists the draft body, its sha256, the approval state
+  (approved body + hash), the send state, the evidence record, and a DURABLE
+  SEND INTENT. `send()` writes
+  `{ meetingId, packageHash, status: "pending" }` BEFORE calling the
+  transport, then marks it `sent`/`failed` after. A new room on the same
+  store (= reload) resumes: unapproved drafts restore unapproved; approved
+  unsent packages re-bind connector state internally and send exactly once
+  (only if `packageHash(body)` still equals the persisted approved hash); a
+  `pending` intent NEVER auto-resends and refuses manual sends with an
+  "unconfirmed — check your outbox" state (`draft.sendState` is
+  `"unconfirmed"`); `sent`/`failed` stay terminal and never resend.
+  Tampered or corrupt data (hash mismatch, bad JSON, hand-edited
+  intent/state mixes) fails closed to unapproved/unsendable. The meeting
+  room uses the `localStorage` store and shows a "Restored from this
+  browser's local storage" note plus the unconfirmed alert when applicable.
+  Pre-approval takeover events (pending, no record yet) are not durable
+  across reloads.
+
 ## Not built / follow-ups
 
 - Real authenticated server-side connector route (needed before any real send;

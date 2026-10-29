@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   MAILTO_LABEL,
+  createLocalStorageRoomStore,
   createTwinRoom,
   type EmailComparison,
   type TwinRoom,
@@ -15,11 +16,17 @@ import { Textarea } from "@/components/ui/textarea";
 
 export default function MeetingRoom() {
   const [room] = useState<TwinRoom>(() =>
-    createTwinRoom({ testMode: true, transport: async () => {} }),
+    createTwinRoom({
+      testMode: true,
+      transport: async () => {},
+      store: createLocalStorageRoomStore(),
+    }),
   );
+  const [restored] = useState(() => room.restoredFromStore());
   const [, setTick] = useState(0);
   const [guide, setGuide] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendNote, setSendNote] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [draftText, setDraftText] = useState(room.view().draft.body);
   const [importText, setImportText] = useState("");
@@ -41,7 +48,8 @@ export default function MeetingRoom() {
   async function onSend() {
     setSending(true);
     try {
-      await room.send();
+      const res = await room.send();
+      setSendNote(res.ok ? "Sent through the test fake transport." : (res.reason ?? "Send refused."));
     } finally {
       setSending(false);
       refresh();
@@ -202,7 +210,19 @@ export default function MeetingRoom() {
           <CardDescription>sha256: {v.draft.sha256}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          {restored && (
+            <p className="text-sm text-muted-foreground">
+              Restored from this browser&apos;s local storage (draft, approval, and send state survive reloads).
+            </p>
+          )}
+          {v.draft.sendState === "unconfirmed" && (
+            <p role="alert" className="text-sm font-medium text-destructive">
+              Send unconfirmed — check your outbox before retrying. A send was attempted before the last
+              reload but its result was never seen, so this app will not resend automatically.
+            </p>
+          )}
           <pre className="whitespace-pre-wrap rounded-md bg-muted p-3 text-sm">{v.draft.body}</pre>
+          {sendNote !== null && <p className="text-sm text-muted-foreground">{sendNote}</p>}
           <p className="text-sm text-muted-foreground">
             Approved: {v.draft.approved ? "yes" : "no"} · Send: {v.draft.sendState}
           </p>

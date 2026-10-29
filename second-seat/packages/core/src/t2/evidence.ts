@@ -91,6 +91,13 @@ export function exportEvidenceJson(record: EvidenceRecord): string {
 
 export interface EvidenceStore {
   get(meetingId: string): EvidenceRecord | null;
+  /**
+   * Restore a previously exported record as-is (used to rehydrate the
+   * store from durable persistence after a reload, preserving `approvedAt`
+   * / `sentAt`). Returns a copy of the restored record, or null when the
+   * input is malformed.
+   */
+  restore(record: EvidenceRecord): EvidenceRecord | null;
   saveApproved(input: {
     readonly meetingId: string;
     readonly meetingTitle: string;
@@ -118,6 +125,28 @@ export function createInMemoryEvidenceStore(opts?: {
     get(meetingId: string): EvidenceRecord | null {
       const found = records.get(meetingId);
       return found ? copyRecord(found) : null;
+    },
+
+    restore(record: EvidenceRecord): EvidenceRecord | null {
+      if (
+        !record ||
+        typeof record.meetingId !== "string" ||
+        typeof record.meetingTitle !== "string" ||
+        typeof record.packageHash !== "string" ||
+        typeof record.approvalPrincipal !== "string" ||
+        typeof record.approvedAt !== "number" ||
+        (record.sentAt !== null && typeof record.sentAt !== "number") ||
+        (record.sendState !== "unsent" &&
+          record.sendState !== "sent" &&
+          record.sendState !== "failed") ||
+        !Array.isArray(record.redactions) ||
+        !Array.isArray(record.takeoverEvents)
+      ) {
+        return null;
+      }
+      const copy = copyRecord(record);
+      records.set(copy.meetingId, copy);
+      return copyRecord(copy);
     },
 
     saveApproved(input): EvidenceRecord {
