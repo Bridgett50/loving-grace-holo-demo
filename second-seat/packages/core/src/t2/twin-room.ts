@@ -93,7 +93,8 @@ export const UNCONFIRMED_SEND_REASON =
   "Send refused: unconfirmed — check your outbox before retrying; the previous attempt may already have sent.";
 export const PENDING_SEND_EDIT_REASON =
   "Package is locked while a send is pending; it can no longer be edited.";
-export const REAPPROVE_AFTER_RELOAD_NOTE = "Approved before reload — approve again.";
+export const REAPPROVE_AFTER_RELOAD_NOTE =
+  "Approval doesn't survive a reload. Review the text below, then approve again.";
 
 export type TwinRoomView = {
   readonly ownerId: string;
@@ -1202,7 +1203,8 @@ export function createTwinRoom(opts?: {
       const hash = packageHash(d.body);
       // Durable send intent BEFORE the transport: a crash after this write
       // reloads as "unconfirmed" instead of silently resending.
-      intents.set(key, { meetingId: ms.meetingId, packageHash: hash, status: "pending" });
+      const pendingIntent: SendIntent = { meetingId: ms.meetingId, packageHash: hash, status: "pending" };
+      intents.set(key, pendingIntent);
       persistSlot(st, ms);
       // Cancellable transport: `takeOver()` aborts this controller, and the
       // signal is handed to the transport (existing one-arg transports keep
@@ -1217,8 +1219,9 @@ export function createTwinRoom(opts?: {
         });
         if (!ran.ran) {
           // The connector refused before the transport ran, so nothing was
-          // sent: clear the intent and stay unsent (a later send may retry).
-          intents.delete(key);
+          // sent: clear only this call's own intent and stay unsent (a later
+          // send may retry).
+          if (intents.get(key) === pendingIntent) intents.delete(key);
           persistSlot(st, ms);
           return { ok: false, reason: SEND_CONNECTOR_REFUSED_REASON };
         }

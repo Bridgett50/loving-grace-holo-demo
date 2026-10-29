@@ -4,6 +4,7 @@ import * as t2index from "../src/t2/index";
 import { createInMemoryRoomStore } from "../src/t2/persistence";
 import { assertDemoFinalState, runDemoEndToEnd, type DemoEndToEndState } from "../src/t2/demo-e2e";
 import {
+  REAPPROVE_AFTER_RELOAD_NOTE,
   SEEDED_SENSITIVE_VALUES,
   TAKEOVER_REFUSAL,
   createTwinRoom,
@@ -296,6 +297,7 @@ describe("t2 hardening review", () => {
     function checkInvariants(
       room: ReturnType<typeof createTwinRoom>,
       label: string,
+      approvedBeforeReload = false,
     ): void {
       const v = room.view();
       // The three export routes always agree with each other.
@@ -326,9 +328,12 @@ describe("t2 hardening review", () => {
           mailto: false,
           file: false,
         });
-        // Approval is never restored on reload: a reloaded slot that was
-        // approved before the reload reports unapproved until re-approved.
-        expect(v.draft.approved, label).toBe(room.approvalNote() === null);
+      }
+      // Approval is never restored on reload (R-3): a reloaded slot that was
+      // approved before the reload is unapproved until re-approved.
+      if (approvedBeforeReload) {
+        expect(v.draft.approved, label).toBe(false);
+        expect(room.approvalNote(), label).toBe(REAPPROVE_AFTER_RELOAD_NOTE);
       }
       // A stale snapshot is always an included one.
       for (const p of v.plugins) {
@@ -417,7 +422,7 @@ describe("t2 hardening review", () => {
         store,
       });
       expect(room2.view().draft.sendState).toBe("unconfirmed");
-      checkInvariants(room2, "unconfirmed after reload");
+      checkInvariants(room2, "unconfirmed after reload", true);
       release();
       await crashed;
     }

@@ -361,7 +361,7 @@ approves an exact follow-up package. All data is invented; nothing is real.
 ## Review fixes (F1)
 
 - #1 a pending send locks the package (edit/plugin include/exclude/refresh refused, intent never deleted).
-- #2 approval is never restored after a reload (the stored approved fields are not trusted; the UI shows "Approved before reload — approve again."; intent history is kept; evidence guidance events survive the re-approval — the importGuidances bug found while verifying).
+- #2 approval is never restored after a reload (the stored approved fields are not trusted; the UI shows "Approval doesn't survive a reload. Review the text below, then approve again."; intent history is kept; evidence guidance events survive the re-approval — the importGuidances bug found while verifying).
 - #3 the fake send transport is enabled only by `SECOND_SEAT_TEST_MODE=1` on a loopback Host / X-Forwarded-Host (otherwise sends are disabled; the Playwright web server sets the flag).
 - #4 takeover survives reload at the room level; connector sessions stay live on purpose so the owner may re-approve the frozen package, and every exit stays refused.
 
@@ -375,6 +375,12 @@ approves an exact follow-up package. All data is invented; nothing is real.
 - #10 the meeting room renders inside the app shell's single `<main>` landmark (C5).
 - #11 intended: a proposed plugin output is shown to the owner in plaintext before inclusion; only included sections are redacted into the package.
 - #12 the Playwright Chrome path can be overridden with `PLAYWRIGHT_CHROME_PATH` (default `/usr/bin/google-chrome`).
+
+## Review fixes (R)
+
+- R-1 a second send while the first is still pending is refused as unconfirmed (tested); the connector-refused branch clears only the intent that call wrote.
+- R-2 the reapproval note reads "Approval doesn't survive a reload. Review the text below, then approve again."
+- R-3 T19-5 asserts reloaded slots that were approved before the reload are unapproved until re-approved.
 
 ## Not built / follow-ups
 
