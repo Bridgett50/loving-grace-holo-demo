@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Radio } from "lucide-react";
+import { MonitorPlay, Radio } from "lucide-react";
 import { PLATFORM_LABEL, SessionStateBadge } from "@/components/status-pills";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -26,9 +26,16 @@ export default async function SessionsPage() {
   const { sessions, error } = await loadBotData(await currentUserId());
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Sessions</h1>
-        <p className="text-muted-foreground">Every meeting your twin attended, with notes, receipts and refunds.</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Sessions</h1>
+          <p className="text-muted-foreground">Every meeting your twin attended, with notes, receipts and refunds.</p>
+        </div>
+        <Button asChild variant="outline">
+          <Link href="/meeting-room">
+            <MonitorPlay /> Meeting room
+          </Link>
+        </Button>
       </div>
       {error && (
         <Alert variant="destructive">
