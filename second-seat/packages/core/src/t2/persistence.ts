@@ -145,6 +145,16 @@ export interface PersistedDraft {
   readonly sendState: PersistedSendState;
   readonly intent: SendIntent | null;
   readonly evidence: EvidenceRecord | null;
+  /**
+   * Streamed transcript lines for the meeting, the script cursor (count of
+   * lines consumed, always equal to `transcript.length` on honest writes),
+   * and the transcript indexes steered by owner guidance. Records written
+   * before transcript persistence existed carry none of these and load as
+   * an empty transcript at cursor 0.
+   */
+  readonly transcript: readonly string[];
+  readonly nextIndex: number;
+  readonly steeredLineIndexes: readonly number[];
 }
 
 const STORE_VERSION = 1;
@@ -365,6 +375,43 @@ export function loadPersistedDraft(
     if (evidence.packageHash !== parsed["approvedHash"]) return null;
   }
 
+  // Transcript position: absent on records written before transcript
+  // persistence existed (loads as empty/0); present-but-malformed fails
+  // closed like every other tamper signal.
+  let transcript: string[] = [];
+  if (parsed["transcript"] !== undefined) {
+    if (
+      !Array.isArray(parsed["transcript"]) ||
+      !parsed["transcript"].every((line) => typeof line === "string")
+    ) {
+      return null;
+    }
+    transcript = [...parsed["transcript"]];
+  }
+  let nextIndex = 0;
+  if (parsed["nextIndex"] !== undefined) {
+    if (
+      typeof parsed["nextIndex"] !== "number" ||
+      !Number.isInteger(parsed["nextIndex"]) ||
+      parsed["nextIndex"] < 0
+    ) {
+      return null;
+    }
+    nextIndex = parsed["nextIndex"];
+  }
+  let steeredLineIndexes: number[] = [];
+  if (parsed["steeredLineIndexes"] !== undefined) {
+    if (
+      !Array.isArray(parsed["steeredLineIndexes"]) ||
+      !parsed["steeredLineIndexes"].every(
+        (index) => typeof index === "number" && Number.isInteger(index),
+      )
+    ) {
+      return null;
+    }
+    steeredLineIndexes = [...parsed["steeredLineIndexes"]];
+  }
+
   return {
     version: STORE_VERSION,
     ownerId,
@@ -383,6 +430,9 @@ export function loadPersistedDraft(
     sendState: parsed["sendState"],
     intent,
     evidence,
+    transcript,
+    nextIndex,
+    steeredLineIndexes,
   };
 }
 

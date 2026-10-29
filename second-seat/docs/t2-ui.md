@@ -40,8 +40,8 @@ approves an exact follow-up package. All data is invented; nothing is real.
   reloads, and not re-approvable. Limit: a send that already completed (or a
   transport that ignores the abort and completes anyway) is truthfully
   reported `sent`; a recall that did not happen is never claimed.
-- F3: "A sent package stays exportable until the meeting changes." A sent
-  package is now LOCKED immediately: Copy / mailto / Download return nothing,
+- F3: "A sent package is locked; only the evidence record stays exportable."
+  A sent package is LOCKED immediately: Copy / mailto / Download return nothing,
   Save edit is refused, and Approve is refused for that meeting (no
   re-approval of an already-sent package). The evidence-record JSON export
   stays available — it is the audit record, not the package.
@@ -292,6 +292,23 @@ approves an exact follow-up package. All data is invented; nothing is real.
   (`copyText`, `mailtoHref`, `exportFile`, `compareImported`) return null
   and the view reports all three export routes unavailable, so a control
   the view shows as available never throws `MeetingDenied`.
+
+## T19 hardening review (part 2)
+
+- **Reload restores transcript, cursor, and steered marks.** The persisted
+  slot now carries the streamed transcript, the script cursor, and the
+  steered-line indexes; a reload resumes mid-script instead of replaying
+  lines, and the durable send intent is re-keyed to the new room's meeting
+  id like the evidence record already was.
+- **Dead exports removed.** `runAllPlugins` and the unused
+  `APPROVE_REFUSED_REASON` / `PLUGIN_APPROVE_REFUSED_REASON` /
+  `PLUGIN_REFRESH_REFUSED_REASON` constants are gone from the `t2` index.
+- **Demo guidance steers the stream.** The guided script sends owner
+  guidance (step 2) before streaming (step 3), so the transcript carries a
+  steered twin line and the evidence record carries the steering event;
+  `assertDemoFinalState` now fails an unsteered run.
+- **F3 note corrected** to "A sent package is locked; only the evidence
+  record stays exportable."
 
 ## Not built / follow-ups
 

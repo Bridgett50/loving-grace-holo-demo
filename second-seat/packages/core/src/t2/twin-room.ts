@@ -83,12 +83,6 @@ export const SEND_CONNECTOR_REFUSED_REASON =
   "Send refused: the connector refused to send.";
 export const SEND_TRANSPORT_FAILED_REASON =
   "Send refused: the transport failed.";
-export const APPROVE_REFUSED_REASON =
-  "Approval refused: the package cannot be approved in its current state.";
-export const PLUGIN_APPROVE_REFUSED_REASON =
-  "Plugin approval refused: the output cannot be included in its current state.";
-export const PLUGIN_REFRESH_REFUSED_REASON =
-  "Plugin refresh refused: the snapshot cannot be refreshed in its current state.";
 export const MAILTO_LABEL = "Open in your mail app";
 
 export type TwinStatus = "active" | "paused (you took over)";
@@ -490,6 +484,11 @@ export function createTwinRoom(opts?: {
       sendState: d.sendState === "unconfirmed" ? "unsent" : d.sendState,
       intent: intents.get(slotKey(st.ownerId, ms.title)) ?? null,
       evidence: evidence.get(ms.meetingId),
+      // Streamed transcript position, so a reload resumes mid-script instead
+      // of replaying lines (or losing the steered-line record).
+      transcript: [...ms.transcript],
+      nextIndex: ms.nextIndex,
+      steeredLineIndexes: [...ms.steeredLineIndexes],
     };
     savePersistedDraft(store, record);
   }
@@ -617,22 +616,57 @@ export function createTwinRoom(opts?: {
           transcriptLen: s.transcriptLen,
         }));
         ms.rejectedPlugins = [...saved.pluginRejected];
+        // Restore the streamed transcript position: the transcript, the
+        // script cursor, and the steered-line record. A hand-edited store
+        // whose lines and cursor disagree fails closed to an empty
+        // transcript, and out-of-range steered marks are dropped.
+        {
+          const lines = saved.transcript.filter(
+            (line): line is string => typeof line === "string",
+          );
+          const cursor =
+            Number.isInteger(saved.nextIndex) &&
+            saved.nextIndex >= 0 &&
+            saved.nextIndex <= ms.script.length &&
+            lines.length === saved.nextIndex
+              ? saved.nextIndex
+              : -1;
+          if (cursor < 0) {
+            ms.transcript = [];
+            ms.nextIndex = 0;
+            ms.steeredLineIndexes = [];
+          } else {
+            ms.transcript = lines;
+            ms.nextIndex = cursor;
+            ms.steeredLineIndexes = saved.steeredLineIndexes.filter(
+              (index) =>
+                Number.isInteger(index) &&
+                index >= 0 &&
+                index < lines.length,
+            );
+          }
+        }
         // Re-key the restored record to this room's meeting id: connector
         // meeting ids are per-room random, so the persisted record's id is
         // stale after a reload while the title still names the same meeting.
+        // The same staleness applies to the durable send intent.
         if (saved.evidence !== null) {
           evidence.restore({ ...saved.evidence, meetingId: ms.meetingId });
         }
+        const rekeyedIntent =
+          saved.intent !== null
+            ? { ...saved.intent, meetingId: ms.meetingId }
+            : null;
         if (
           saved.approved &&
           saved.approvedBody !== null &&
           !st.takenOver &&
           rebindApproved(st, ms, saved.approvedBody)
         ) {
-          if (saved.intent !== null) {
-            intents.set(slotKey(st.ownerId, ms.title), saved.intent);
+          if (rekeyedIntent !== null) {
+            intents.set(slotKey(st.ownerId, ms.title), rekeyedIntent);
             ms.draft.sendState =
-              saved.intent.status === "pending" ? "unconfirmed" : saved.intent.status;
+              rekeyedIntent.status === "pending" ? "unconfirmed" : rekeyedIntent.status;
           } else {
             ms.draft.sendState = saved.sendState;
           }
@@ -644,10 +678,10 @@ export function createTwinRoom(opts?: {
           // pending intent stays "unconfirmed" instead of becoming resendable.
           ms.draft.approved = false;
           ms.draft.sendState = "unsent";
-          if (saved.intent !== null) {
-            intents.set(slotKey(st.ownerId, ms.title), saved.intent);
+          if (rekeyedIntent !== null) {
+            intents.set(slotKey(st.ownerId, ms.title), rekeyedIntent);
             ms.draft.sendState =
-              saved.intent.status === "pending" ? "unconfirmed" : saved.intent.status;
+              rekeyedIntent.status === "pending" ? "unconfirmed" : rekeyedIntent.status;
           }
         }
         persistSlot(st, ms);

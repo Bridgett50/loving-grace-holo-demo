@@ -112,11 +112,6 @@ export const BUILTIN_PLUGINS: readonly TwinPlugin[] = [
   calendarFollowupPlugin,
 ];
 
-/** Run every built-in plugin against one meeting's context only. */
-export function runAllPlugins(context: MeetingContext): PluginOutput[] {
-  return BUILTIN_PLUGINS.map((plugin) => plugin.run(context));
-}
-
 /**
  * Render a plugin output as the package section appended when the owner
  * includes it. Plain text only.

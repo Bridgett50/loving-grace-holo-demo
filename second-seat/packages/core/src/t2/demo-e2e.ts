@@ -238,6 +238,29 @@ export function assertDemoFinalState(state: DemoEndToEndState): {
   ) {
     failures.push("The transported body is not exactly the final package body.");
   }
+
+  // The guided demo sends guidance before streaming, so at least one twin
+  // line is steered and the evidence record carries the steering event.
+  if (state.steeredLines.length === 0 || state.guidanceEvents.length === 0) {
+    failures.push(
+      "The demo steered no twin line: guidance must steer at least one streamed line.",
+    );
+  } else {
+    for (const event of state.guidanceEvents) {
+      const line = state.transcript[event.steeredLineIndex];
+      if (
+        event.steeredLineIndex < 0 ||
+        event.steeredLineIndex >= state.transcript.length ||
+        typeof line !== "string" ||
+        !line.startsWith("Twin:")
+      ) {
+        failures.push(
+          `A guidance steering event points at transcript index ${event.steeredLineIndex}, which is not a steered Twin: line.`,
+        );
+        break;
+      }
+    }
+  }
   if (
     state.packageBody.length > 0 &&
     state.packageHash !== packageHash(state.packageBody)

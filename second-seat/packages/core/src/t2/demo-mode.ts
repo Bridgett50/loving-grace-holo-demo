@@ -64,8 +64,8 @@ async function streamAllLines(room: TwinRoom): Promise<number> {
 
 export const DEMO_STEP_IDS = [
   "demo-join",
-  "demo-stream",
   "demo-guide",
+  "demo-stream",
   "demo-plugin",
   "demo-approve",
   "demo-send",
@@ -90,20 +90,20 @@ export const DEMO_STEPS: readonly DemoStep[] = [
     },
   },
   {
-    id: "demo-stream",
-    caption: "Watch the twin stream its proactive answer.",
-    label: "Demo step 2 of 9: stream the twin's proactive answer",
-    run(room: TwinRoom): Promise<number> {
-      return streamAllLines(room);
+    id: "demo-guide",
+    caption: "Send owner guidance to the twin.",
+    label: "Demo step 2 of 9: send owner guidance",
+    run(room: TwinRoom): number {
+      room.guide("No dates in the recap; Bridgett confirms timing herself.");
+      return room.view().guidance.length;
     },
   },
   {
-    id: "demo-guide",
-    caption: "Send owner guidance to the twin.",
-    label: "Demo step 3 of 9: send owner guidance",
-    run(room: TwinRoom): number {
-      room.guide("Keep the recap short; Bridgett reviews every date herself.");
-      return room.view().guidance.length;
+    id: "demo-stream",
+    caption: "Watch the twin stream its proactive answer, steered by your guidance.",
+    label: "Demo step 3 of 9: stream the twin's steered answer",
+    run(room: TwinRoom): Promise<number> {
+      return streamAllLines(room);
     },
   },
   {

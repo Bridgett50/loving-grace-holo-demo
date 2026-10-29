@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { packageHash } from "../src/t2/connector";
 import * as t2index from "../src/t2/index";
 import { createInMemoryRoomStore } from "../src/t2/persistence";
+import { assertDemoFinalState, runDemoEndToEnd, type DemoEndToEndState } from "../src/t2/demo-e2e";
 import {
   SEEDED_SENSITIVE_VALUES,
   TAKEOVER_REFUSAL,
@@ -418,6 +419,194 @@ describe("t2 hardening review", () => {
       release();
       await crashed;
     }
+  });
+
+  it("T19-4 a reloaded room reports the same view as the live room for the same history", () => {
+    const store = createInMemoryRoomStore();
+    const clock = { now: 1700000000000 };
+    const room1 = createTwinRoom({
+      testMode: true,
+      transport: async () => {},
+      store,
+      now: () => clock.now,
+    });
+    room1.guide("No dates here — Bridgett confirms timing herself.");
+    expect(room1.streamNextLine().appended).toBe(true);
+    expect(room1.streamNextLine().appended).toBe(true);
+    expect(room1.approvePluginOutput("action-items").approved).toBe(true);
+    expect(room1.approve().approved).toBe(true);
+    expect(room1.view().transcript.length).toBe(2);
+    expect(room1.view().steeredLines).toEqual([1]);
+
+    // Reload: drop room1, build room2 on the same store.
+    const room2 = createTwinRoom({
+      testMode: true,
+      transport: async () => {},
+      store,
+      now: () => clock.now,
+    });
+    expect(room2.restoredFromStore()).toBe(true);
+    const title = room1.view().selectedMeetingTitle;
+    const same = room2.view().meetings.find((m) => m.title === title);
+    expect(same).toBeDefined();
+    if (same === undefined) throw new Error("expected the reloaded meeting");
+    room2.selectMeeting(same.id);
+
+    // Connector meeting ids are per-room random values: normalize them
+    // (and only them) before comparing the two views.
+    function normalize(value: unknown): unknown {
+      if (typeof value !== "string") return value;
+      let out = value;
+      for (const m of room1.view().meetings)
+        out = out.split(m.id).join(`<id:${m.title}>`);
+      for (const m of room2.view().meetings)
+        out = out.split(m.id).join(`<id:${m.title}>`);
+      return out;
+    }
+    function scrub(value: unknown): unknown {
+      if (typeof value === "string") return normalize(value);
+      if (Array.isArray(value)) return value.map(scrub);
+      if (typeof value === "object" && value !== null) {
+        return Object.fromEntries(
+          Object.entries(value as Record<string, unknown>).map(([k, v]) => [
+            k,
+            scrub(v),
+          ]),
+        );
+      }
+      return value;
+    }
+
+    expect(scrub(room2.view())).toEqual(scrub(room1.view()));
+    expect(scrub(room2.evidenceRecord())).toEqual(
+      scrub(room1.evidenceRecord()),
+    );
+    expect(scrub(room2.exportEvidenceJson())).toEqual(
+      scrub(room1.exportEvidenceJson()),
+    );
+    expect(scrub(room2.sendIntent())).toEqual(scrub(room1.sendIntent()));
+  });
+
+  it("T19-6 removed dead exports are no longer exported from the t2 index", () => {
+    const surface = t2index as unknown as Record<string, unknown>;
+    // `runAllPlugins` was dead: the room runs its injected plugins through
+    // its own meeting-scoped path and neither the web app nor any test ever
+    // imported it.
+    expect("runAllPlugins" in surface).toBe(false);
+    // The kept surface is still intact (guards against over-deletion).
+    for (const name of [
+      "createTwinRoom",
+      "createDemoController",
+      "isDemoMode",
+      "runDemoEndToEnd",
+      "assertDemoFinalState",
+      "compareImportedText",
+      "deriveApprovedPackage",
+      "NO_APPROVED_PACKAGE_MESSAGE",
+      "redactPackageText",
+      "createInMemoryRoomStore",
+      "TAKEOVER_REFUSAL",
+      "STALE_LINE_REFUSAL",
+      "SEND_ALREADY_RESOLVED_REASON",
+    ]) {
+      expect(name in surface, name).toBe(true);
+    }
+  });
+
+  it("T19-7 assertDemoFinalState reports a failure when a seeded sensitive value leaks into transcript, package or evidence", async () => {
+    const clean = await runDemoEndToEnd({ search: "?demo=1" });
+    expect(assertDemoFinalState(clean).ok).toBe(true);
+    const secret = SEEDED_SENSITIVE_VALUES[0];
+    expect(secret?.length).toBeGreaterThan(0);
+
+    const leakedTranscript: DemoEndToEndState = {
+      ...clean,
+      transcript: [...clean.transcript, `leaked contact ${secret}`],
+    };
+    const transcriptCheck = assertDemoFinalState(leakedTranscript);
+    expect(transcriptCheck.ok).toBe(false);
+    expect(
+      transcriptCheck.failures.some((f) => f.includes("transcript")),
+      transcriptCheck.failures.join(" | "),
+    ).toBe(true);
+
+    const leakedBody = `${clean.packageBody}\nleaked contact ${secret}\n`;
+    const leakedPackage: DemoEndToEndState = {
+      ...clean,
+      packageBody: leakedBody,
+      packageHash: packageHash(leakedBody),
+      transportBodies: [leakedBody],
+    };
+    const packageCheck = assertDemoFinalState(leakedPackage);
+    expect(packageCheck.ok).toBe(false);
+    expect(
+      packageCheck.failures.some((f) => f.includes("package body")),
+      packageCheck.failures.join(" | "),
+    ).toBe(true);
+
+    const leakedEvidence: DemoEndToEndState = {
+      ...clean,
+      evidenceJson: `${clean.evidenceJson ?? ""}\nleaked contact ${secret}\n`,
+    };
+    const evidenceCheck = assertDemoFinalState(leakedEvidence);
+    expect(evidenceCheck.ok).toBe(false);
+    expect(
+      evidenceCheck.failures.some((f) => f.includes("evidence JSON")),
+      evidenceCheck.failures.join(" | "),
+    ).toBe(true);
+  });
+
+  it("T19-8 assertDemoFinalState reports a failure when the transport is called zero or two times, and the demo steers a twin line", async () => {
+    const clean = await runDemoEndToEnd({ search: "?demo=1" });
+    expect(assertDemoFinalState(clean).ok).toBe(true);
+
+    // The guided demo steers at least one twin line: guidance first, then
+    // the stream, so the transcript carries a steered mark and the evidence
+    // record carries the steering event.
+    expect(clean.steeredLines.length).toBeGreaterThan(0);
+    expect(clean.guidanceEvents.length).toBeGreaterThan(0);
+    for (const event of clean.guidanceEvents) {
+      expect(event.steeredLineIndex).toBeGreaterThanOrEqual(0);
+      expect(event.steeredLineIndex).toBeLessThan(clean.transcript.length);
+      expect(clean.transcript[event.steeredLineIndex]?.startsWith("Twin:")).toBe(
+        true,
+      );
+    }
+    const unsteered: DemoEndToEndState = {
+      ...clean,
+      steeredLines: [],
+      guidanceEvents: [],
+    };
+    const unsteeredCheck = assertDemoFinalState(unsteered);
+    expect(unsteeredCheck.ok).toBe(false);
+    expect(
+      unsteeredCheck.failures.some((f) => /steer/i.test(f)),
+      unsteeredCheck.failures.join(" | "),
+    ).toBe(true);
+
+    const neverSent: DemoEndToEndState = {
+      ...clean,
+      transportCalls: 0,
+      transportBodies: [],
+    };
+    const neverCheck = assertDemoFinalState(neverSent);
+    expect(neverCheck.ok).toBe(false);
+    expect(
+      neverCheck.failures.some((f) => f.includes("transport")),
+      neverCheck.failures.join(" | "),
+    ).toBe(true);
+
+    const sentTwice: DemoEndToEndState = {
+      ...clean,
+      transportCalls: 2,
+      transportBodies: [clean.packageBody, clean.packageBody],
+    };
+    const twiceCheck = assertDemoFinalState(sentTwice);
+    expect(twiceCheck.ok).toBe(false);
+    expect(
+      twiceCheck.failures.some((f) => f.includes("transport")),
+      twiceCheck.failures.join(" | "),
+    ).toBe(true);
   });
 
 });

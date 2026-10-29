@@ -100,11 +100,12 @@ Walk the nine steps in order, saying and showing this at each one:
 1. **Join the Q3 launch sync.** Say: "This is a synthetic meeting; my twin
    joins from my permitted notes only." Show the room view: owner switcher
    (Bridgett Sanders), twin identity, and the selected meeting title.
-2. **Stream the twin's proactive answer.** Say: "The twin answers live from
-   the scripted transcript." Show the transcript lines appearing.
-3. **Send owner guidance.** Say: "I privately steer the next answer — the
+2. **Send owner guidance.** Say: "I privately steer the next answer — the
    guidance never goes to participants or into the package." Show the
-   guidance entry and the steered-line marker.
+   guidance entry.
+3. **Stream the twin's steered answer.** Say: "The twin answers live from
+   the scripted transcript, steered by my guidance." Show the transcript
+   lines appearing with the steered-line marker.
 4. **Include the action-items plugin output.** Say: "A local plugin proposes
    action items; I include the proposal into the package." Show the Plugins
    panel status flipping to included and the package body growing.
