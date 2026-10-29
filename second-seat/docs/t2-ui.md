@@ -48,9 +48,23 @@ approves an exact follow-up package. All data is invented; nothing is real.
   second-seat-hackathon connector @ ea11592 (same names, signatures, and guard
   logic; `node:crypto` replaced with pure-TS SHA-256 and local ids).
 
+## What is shown (continued)
+
+- **T8 imported-email comparison.** An "Imported email comparison" card lets the
+  owner paste a synthetic existing draft or read a local `.txt`/`.eml` file
+  (FileReader, labelled synthetic/local — nothing leaves the browser) and press
+  Compare. The room's `compareImported(text)` compares read-only against the
+  selected meeting's CURRENT APPROVED package (null / "no approved package"
+  before approval or after an edit clears it) and renders a field-by-field table
+  — Recipients (missing/extra), Subject (match or not), Body diff (added/removed
+  lines), Attachments (missing/extra) — with a MISMATCH flag per differing
+  field. An identical draft shows no flags. The comparison never mutates the
+  draft, approval, job, or package hash. Recipients/attachments are derived
+  deterministically from synthetic meeting data (scripted `Name:` speakers as
+  `<name>@example.test`, `notes-<slug>.txt` attachment).
+
 ## Not built / follow-ups
 
-- Imported-email side-by-side comparison (not in existing code; planned T8).
 - Redaction-evidence saved record.
 - Real authenticated server-side connector route (needed before any real send;
   `productionDispatch` stays disabled).

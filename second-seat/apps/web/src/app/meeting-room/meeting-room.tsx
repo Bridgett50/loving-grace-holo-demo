@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MAILTO_LABEL, createTwinRoom, type TwinRoom } from "@second-seat/core";
+import {
+  MAILTO_LABEL,
+  createTwinRoom,
+  type EmailComparison,
+  type TwinRoom,
+} from "@second-seat/core";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +22,8 @@ export default function MeetingRoom() {
   const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
   const [draftText, setDraftText] = useState(room.view().draft.body);
+  const [importText, setImportText] = useState("");
+  const [compared, setCompared] = useState<EmailComparison | null | undefined>(undefined);
   const v = room.view();
 
   useEffect(() => {
@@ -83,6 +90,7 @@ export default function MeetingRoom() {
               room.switchOwner(id);
               setDraftText(room.view().draft.body);
               setCopied(false);
+              setCompared(undefined);
               refresh();
             }}
           >
@@ -109,6 +117,7 @@ export default function MeetingRoom() {
                   room.selectMeeting(m.id);
                   setDraftText(room.view().draft.body);
                   setCopied(false);
+                  setCompared(undefined);
                   refresh();
                 }}
               >
@@ -236,6 +245,116 @@ export default function MeetingRoom() {
               <li key={i}>{n}</li>
             ))}
           </ul>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Imported email comparison</CardTitle>
+          <CardDescription>
+            Synthetic draft import only — paste text or read a local .txt/.eml file. Nothing leaves
+            the browser; the import is compared read-only against the selected meeting&apos;s current
+            approved package.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Textarea
+            value={importText}
+            onChange={(e) => setImportText(e.target.value)}
+            aria-label="Paste imported draft"
+            placeholder={"To: priya@example.test\nCc:\nSubject: Follow-up: Q3 launch sync\nAttachments: notes-q3-launch-sync.txt\n\nHi everyone,\n\n…"}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="file"
+              accept=".txt,.eml"
+              aria-label="Upload local draft file"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                  if (typeof reader.result === "string") setImportText(reader.result);
+                };
+                reader.readAsText(file);
+              }}
+            />
+            <Button
+              onClick={() => {
+                setCompared(room.compareImported(importText));
+              }}
+            >
+              Compare
+            </Button>
+          </div>
+          {compared === null && (
+            <p className="text-sm text-muted-foreground">
+              No approved package for the selected meeting yet. Approve the draft first, then
+              compare.
+            </p>
+          )}
+          {compared && (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-muted-foreground">
+                  <th className="py-1 pr-2 font-medium">Field</th>
+                  <th className="py-1 pr-2 font-medium">Status</th>
+                  <th className="py-1 font-medium">Detail</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-t">
+                  <td className="py-1 pr-2">Recipients</td>
+                  <td className="py-1 pr-2">
+                    {compared.recipients.equal ? "match" : "MISMATCH"}
+                  </td>
+                  <td className="py-1">
+                    {compared.recipients.equal
+                      ? compared.recipients.expected.join(", ")
+                      : `missing: ${compared.recipients.missing.join(", ") || "—"} · extra: ${compared.recipients.extra.join(", ") || "—"}`}
+                  </td>
+                </tr>
+                <tr className="border-t">
+                  <td className="py-1 pr-2">Subject</td>
+                  <td className="py-1 pr-2">{compared.subject.equal ? "match" : "MISMATCH"}</td>
+                  <td className="py-1">
+                    {compared.subject.equal
+                      ? compared.subject.expected
+                      : `approved: ${compared.subject.expected} · imported: ${compared.subject.actual || "—"}`}
+                  </td>
+                </tr>
+                <tr className="border-t">
+                  <td className="py-1 pr-2">Body diff</td>
+                  <td className="py-1 pr-2">{compared.body.equal ? "match" : "MISMATCH"}</td>
+                  <td className="py-1">
+                    {compared.body.equal ? (
+                      "identical"
+                    ) : (
+                      <>
+                        {compared.body.removed.map((line, i) => (
+                          <div key={`r-${i}`}>− {line}</div>
+                        ))}
+                        {compared.body.added.map((line, i) => (
+                          <div key={`a-${i}`}>+ {line}</div>
+                        ))}
+                      </>
+                    )}
+                  </td>
+                </tr>
+                <tr className="border-t">
+                  <td className="py-1 pr-2">Attachments</td>
+                  <td className="py-1 pr-2">
+                    {compared.attachments.equal ? "match" : "MISMATCH"}
+                  </td>
+                  <td className="py-1">
+                    {compared.attachments.equal
+                      ? compared.attachments.expected.join(", ")
+                      : `missing: ${compared.attachments.missing.join(", ") || "—"} · extra: ${compared.attachments.extra.join(", ") || "—"}`}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          )}
         </CardContent>
       </Card>
     </div>
