@@ -63,9 +63,30 @@ approves an exact follow-up package. All data is invented; nothing is real.
   deterministically from synthetic meeting data (scripted `Name:` speakers as
   `<name>@example.test`, `notes-<slug>.txt` attachment).
 
+## What is shown (continued)
+
+- **T9 redaction-evidence saved record.** Package text is redacted before it is
+  shown, hashed, or approved: a deterministic synthetic redactor
+  (`packages/core/src/t2/redaction.ts`) replaces invented `email` / `phone`
+  (`555-01xx`) / `amount` (`$12,000`-style) values with numbered placeholders
+  like `[REDACTED:phone:1]`, keeping only per-category count/placeholders/
+  positions (offsets in the redacted output) — never the plaintext. One seeded
+  meeting ("Q3 launch sync") carries a made-up contact line so redaction is
+  exercised; `view().draft.body` is the redacted text that is hashed and
+  approved. On approve the room saves an `EvidenceRecord`
+  (`packages/core/src/t2/evidence.ts`, in-memory store, injectable `now` clock)
+  with meeting id/title, package hash, `approvedAt`, `sentAt` (null until sent),
+  `sendState`, the approving owner id, the redaction metadata, and owner
+  takeover events (logged before or after approval). A successful send stamps
+  `sentAt`/`sendState`. Record writes never alter the package, hash, or
+  approval state. The meeting room shows an "Evidence record" card (hash,
+  times, principal, redactions with category/count/placeholders, takeover
+  events) with an "Export evidence JSON" button that downloads a local `.json`
+  file (Blob + object URL, no network); `exportEvidenceJson()` emits stable,
+  pretty JSON.
+
 ## Not built / follow-ups
 
-- Redaction-evidence saved record.
 - Real authenticated server-side connector route (needed before any real send;
   `productionDispatch` stays disabled).
 - Browser e2e/DOM tests (no DOM test framework in this repo; not added).

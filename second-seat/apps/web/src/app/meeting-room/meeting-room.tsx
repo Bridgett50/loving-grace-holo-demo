@@ -70,7 +70,19 @@ export default function MeetingRoom() {
     URL.revokeObjectURL(url);
   }
 
+  function onExportEvidence() {
+    const json = room.exportEvidenceJson();
+    if (json === null) return;
+    const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `evidence-${v.selectedMeetingId}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const mailto = room.mailtoHref();
+  const evidence = room.evidenceRecord();
 
   return (
     <div className="space-y-6">
@@ -245,6 +257,80 @@ export default function MeetingRoom() {
               <li key={i}>{n}</li>
             ))}
           </ul>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Evidence record</CardTitle>
+          <CardDescription>
+            Local saved record for the selected meeting&apos;s approved package. Synthetic data
+            only; nothing leaves the browser.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {evidence === null && (
+            <p className="text-sm text-muted-foreground">
+              No evidence record for this meeting yet. Approve the package first.
+            </p>
+          )}
+          {evidence !== null && (
+            <>
+              <dl className="space-y-1 text-sm">
+                <div className="flex gap-2">
+                  <dt className="font-medium">Package hash:</dt>
+                  <dd className="break-all">{evidence.packageHash}</dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="font-medium">Approved at:</dt>
+                  <dd>{new Date(evidence.approvedAt).toISOString()}</dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="font-medium">Sent at:</dt>
+                  <dd>
+                    {evidence.sentAt === null
+                      ? "not sent yet"
+                      : new Date(evidence.sentAt).toISOString()}
+                  </dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="font-medium">Send state:</dt>
+                  <dd>{evidence.sendState}</dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="font-medium">Approved by:</dt>
+                  <dd>{evidence.approvalPrincipal}</dd>
+                </div>
+              </dl>
+              <div>
+                <p className="text-sm font-medium">Redactions</p>
+                <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                  {evidence.redactions.map((r) => (
+                    <li key={r.category}>
+                      {r.category}: count {r.count} · {r.placeholders.join(", ") || "—"}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Takeover events</p>
+                {evidence.takeoverEvents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">None.</p>
+                ) : (
+                  <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                    {evidence.takeoverEvents.map((e, i) => (
+                      <li key={i}>
+                        {e.kind} at {new Date(e.at).toISOString()}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <Button onClick={onExportEvidence} variant="outline">
+                Export evidence JSON
+              </Button>
+            </>
+          )}
         </CardContent>
       </Card>
 
