@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   A11Y_FOCUS_RING,
   A11Y_LABELS,
@@ -23,6 +23,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
+// The demo flag never changes while the page is open, so nothing to subscribe to.
+function subscribeToNothing(): () => void {
+  return () => {};
+}
+
 export default function MeetingRoom() {
   const [room] = useState<TwinRoom>(() =>
     createTwinRoom({
@@ -42,8 +47,12 @@ export default function MeetingRoom() {
   const [compared, setCompared] = useState<EmailComparison | null | undefined>(undefined);
   const [announcements, setAnnouncements] = useState<string[]>([]);
   const prevViewRef = useRef<TwinRoomView | null>(null);
-  const [demoOn] = useState(
-    () => typeof window !== "undefined" && isDemoMode(window.location.search),
+  // Read ?demo=1 only on the client: the server snapshot is always false, so
+  // the server HTML and the first client render match (no hydration error).
+  const demoOn = useSyncExternalStore(
+    subscribeToNothing,
+    () => isDemoMode(window.location.search),
+    () => false,
   );
   const [demoCtrl] = useState(() => createDemoController(room));
   const [demoStep, setDemoStep] = useState<DemoStep | null>(() =>

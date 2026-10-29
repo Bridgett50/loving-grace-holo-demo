@@ -139,6 +139,8 @@ Run the same flow headlessly any time (no browser needed):
 node second-seat/scripts/demo-e2e.mjs
 ```
 
+Browser e2e of the same flow: `cd second-seat/apps/web && ./node_modules/.bin/playwright test`.
+
 It drives every guided step against a real twin room through the public
 demo-mode API, checks the documented end state, prints a short PASS/FAIL
 summary, and exits non-zero on failure.

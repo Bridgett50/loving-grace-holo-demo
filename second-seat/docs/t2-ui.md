@@ -340,11 +340,31 @@ approves an exact follow-up package. All data is invented; nothing is real.
   announcements, and a static source check of the tsx) — no browser or
   screen-reader run.
 
+## What is shown (continued)
+
+- **Browser e2e (T20).** Four Playwright tests
+  (`apps/web/e2e/demo-flow.spec.ts`) drive the real browser DOM for the
+  synthetic `?demo=1` flow: `C1-demo-flow-completes-all-nine-steps` clicks
+  Next through all nine steps and asserts the sent/locked end state,
+  `C2-demo-page-hydrates-without-console-errors` asserts no hydration
+  console errors, `C3-keyboard-shortcuts-advance-and-restart` checks the
+  Right arrow / N / R shortcuts (including keys ignored while typing),
+  and `C4-demo-card-hidden-without-demo-flag` checks the demo card is
+  hidden without the flag. Run with
+  `cd second-seat/apps/web && ./node_modules/.bin/playwright test`. It uses
+  system Chrome at `/usr/bin/google-chrome` headless with no browser
+  download and a local `next dev` on 4310 (started by the Playwright
+  `webServer` entry). Hydration bug fixed: the demo flag is now read only
+  on the client via `useSyncExternalStore` (server snapshot always false),
+  so the server HTML and first client render match.
+
 ## Not built / follow-ups
 
 - Real authenticated server-side connector route (needed before any real send;
   `productionDispatch` stays disabled).
-- Browser e2e/DOM tests (no DOM test framework in this repo; not added).
+- Browser e2e CI wiring (the T20 Playwright suite runs locally only; not
+  added). Chrome path is hard-coded (`/usr/bin/google-chrome`). Google
+  fonts fall back when offline.
   The T13 guided demo is covered by a headless core test instead
   (see above); T18 adds a headless whole-flow runner plus a script, but
   still drives core directly, not a real browser DOM. T17 is likewise
