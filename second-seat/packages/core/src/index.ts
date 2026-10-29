@@ -11,3 +11,4 @@ export * from "./knowledge";
 export * from "./summary";
 export * from "./catalog";
 export * from "./intelligence";
+export * from "./t2";

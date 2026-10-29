@@ -26,9 +26,14 @@ export default async function SessionsPage() {
   const { sessions, error } = await loadBotData(await currentUserId());
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Sessions</h1>
-        <p className="text-muted-foreground">Every meeting your twin attended, with notes, receipts and refunds.</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Sessions</h1>
+          <p className="text-muted-foreground">Every meeting your twin attended, with notes, receipts and refunds.</p>
+        </div>
+        <Button asChild variant="outline">
+          <Link href="/meeting-room">Open the twin meeting room</Link>
+        </Button>
       </div>
       {error && (
         <Alert variant="destructive">
