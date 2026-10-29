@@ -335,6 +335,8 @@ export function createTwinRoom(opts?: {
   // no-op and behaviour is exactly the pre-T10 behaviour.
   const store = opts?.store ?? null;
   const intents = new Map<string, SendIntent>();
+  // Owners that already took over in THIS room instance (review #7).
+  const takeoversThisRoom = new Set<string>();
   // In-flight sends keyed by slot key, so `takeOver()` can abort the
   // transport of the owner's current attempt. Entries are removed when the
   // send settles; a one-arg transport simply ignores the signal.
@@ -520,8 +522,13 @@ export function createTwinRoom(opts?: {
       st.ownerId,
       st.meetings.map((m) => ({
         meetingTitle: m.title,
-        history: [...m.guidanceHistory],
-        pending: m.pendingGuidance.map((p) => ({ text: p.text, at: p.at })),
+        // Stored redacted (review #8): the raw guidance text stays in memory
+        // only; a reload restores the redacted text.
+        history: m.guidanceHistory.map((t) => redactPackageText(t).redactedText),
+        pending: m.pendingGuidance.map((p) => ({
+          text: redactPackageText(p.text).redactedText,
+          at: p.at,
+        })),
       })),
     );
   }
@@ -947,6 +954,12 @@ export function createTwinRoom(opts?: {
 
     takeOver(): void {
       const st = active();
+      // Idempotent (review #7): a repeated takeover in the same room aborts,
+      // logs and persists nothing more, so each meeting keeps exactly one
+      // event. A takeover in a reloaded room is a new owner action and is
+      // still logged (T15-2).
+      if (takeoversThisRoom.has(st.ownerId)) return;
+      takeoversThisRoom.add(st.ownerId);
       // Abort this owner's in-flight sends first: a transport that rejects
       // because of the abort lands in "cancelled". A transport that already
       // completed (or ignores the abort and completes anyway) stays "sent":

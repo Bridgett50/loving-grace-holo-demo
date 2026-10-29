@@ -1,7 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
 // Headless e2e of the synthetic ?demo=1 flow. Uses the system Chrome (no
-// Playwright browser download) and a local `next dev` on port 4310.
+// Playwright browser download; PLAYWRIGHT_CHROME_PATH overrides the path) and a local `next dev` on port 4310.
 export default defineConfig({
   testDir: "./e2e",
   timeout: 120_000,
@@ -10,7 +10,10 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:4310",
     headless: true,
-    launchOptions: { executablePath: "/usr/bin/google-chrome" },
+    // Override with PLAYWRIGHT_CHROME_PATH; defaults to the system Chrome.
+    launchOptions: {
+      executablePath: process.env.PLAYWRIGHT_CHROME_PATH || "/usr/bin/google-chrome",
+    },
   },
   webServer: {
     command: "pnpm exec next dev -p 4310 -H 127.0.0.1",

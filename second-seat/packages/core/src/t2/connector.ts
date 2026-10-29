@@ -114,12 +114,19 @@ type JobRecord = {
 
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "::1"]);
 
-let idCounter = 0;
+// Holo mirror deviation (review #9): ids come from crypto.getRandomValues
+// (a random v4 UUID); with no secure random source this throws instead of
+// falling back to a guessable counter.
 function newId(): string {
   const c = globalThis.crypto;
-  if (c && typeof c.randomUUID === "function") return c.randomUUID();
-  idCounter += 1;
-  return `id-${Date.now().toString(36)}-${idCounter}`;
+  if (!c || typeof c.getRandomValues !== "function") {
+    throw new Error("connector ids need crypto.getRandomValues; none is available");
+  }
+  const b = c.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
 function bareHost(host: string): string {

@@ -365,6 +365,17 @@ approves an exact follow-up package. All data is invented; nothing is real.
 - #3 the fake send transport is enabled only by `SECOND_SEAT_TEST_MODE=1` on a loopback Host / X-Forwarded-Host (otherwise sends are disabled; the Playwright web server sets the flag).
 - #4 takeover survives reload at the room level; connector sessions stay live on purpose so the owner may re-approve the frozen package, and every exit stays refused.
 
+## Review fixes (F2)
+
+- #5 a reloaded pending send intent refuses send even when the stored send state was rewritten to `unsent`; the restored intent is re-keyed to the reloaded meeting id.
+- #6 Playwright C4 waits for hydration before asserting the demo card is absent; C6 is the positive control on `?demo=1`.
+- #7 `takeOver()` is idempotent within a room: a repeated call logs and persists nothing more (a takeover in a reloaded room is a new owner action and is logged).
+- #8 the guidance channel is stored redacted (history and queue); the raw text stays in memory only.
+- #9 the holo connector mirror's ids come from `crypto.getRandomValues` (random v4 UUID) and throw without it; no counter fallback. The hackathon connector suite is ported as `t2-connector-suite.test.ts` (41 of 42 tests; the hackathon-only web-server import check has no holo counterpart).
+- #10 the meeting room renders inside the app shell's single `<main>` landmark (C5).
+- #11 intended: a proposed plugin output is shown to the owner in plaintext before inclusion; only included sections are redacted into the package.
+- #12 the Playwright Chrome path can be overridden with `PLAYWRIGHT_CHROME_PATH` (default `/usr/bin/google-chrome`).
+
 ## Not built / follow-ups
 
 - Real authenticated server-side connector route (needed before any real send;

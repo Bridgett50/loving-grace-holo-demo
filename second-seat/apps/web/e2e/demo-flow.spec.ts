@@ -10,6 +10,17 @@ function collectErrors(page: Page): string[] {
   return errors;
 }
 
+// Review #6: wait until React has hydrated (the Guide button's handler
+// clears the controlled input) so a client-only element cannot appear late.
+async function waitForHydration(page: Page): Promise<void> {
+  const input = page.locator("#guidance-input");
+  await expect(async () => {
+    await input.fill("hydration probe");
+    await page.locator("#guidance-send").click();
+    await expect(input).toHaveValue("", { timeout: 1_000 });
+  }).toPass({ timeout: 60_000 });
+}
+
 test("C1-demo-flow-completes-all-nine-steps", async ({ page }) => {
   await page.goto("/meeting-room?demo=1");
   const next = page.locator("#demo-next");
@@ -56,5 +67,19 @@ test("C3-keyboard-shortcuts-advance-and-restart", async ({ page }) => {
 test("C4-demo-card-hidden-without-demo-flag", async ({ page }) => {
   await page.goto("/meeting-room");
   await expect(page.locator("#mr-meeting-heading")).toBeVisible();
+  await waitForHydration(page);
   await expect(page.locator("#demo-next")).toHaveCount(0);
+});
+
+test("C5-meeting-room-has-a-single-main-landmark", async ({ page }) => {
+  await page.goto("/meeting-room");
+  await waitForHydration(page);
+  await expect(page.locator("main")).toHaveCount(1);
+  await expect(page.getByRole("main")).toHaveCount(1);
+});
+
+test("C6-demo-card-shown-with-demo-flag-after-hydration", async ({ page }) => {
+  await page.goto("/meeting-room?demo=1");
+  await waitForHydration(page);
+  await expect(page.locator("#demo-next")).toHaveCount(1);
 });

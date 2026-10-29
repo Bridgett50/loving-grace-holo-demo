@@ -184,7 +184,7 @@ export default function MeetingRoom({ testMode }: { testMode: boolean }) {
   const pluginsLocked = v.twinStatus !== "active" || v.draft.sendState !== "unsent";
 
   return (
-    <main className="mr-room space-y-6">
+    <div className="mr-room space-y-6">
       <style>{`.mr-room :focus-visible { outline: 3px solid ${A11Y_FOCUS_RING.color}; outline-offset: 2px; }
 @media (max-width: 640px) { .mr-room .flex { flex-direction: column; } }`}</style>
       <Alert>
@@ -824,6 +824,6 @@ export default function MeetingRoom({ testMode }: { testMode: boolean }) {
           </CardContent>
         </Card>
       </section>
-    </main>
+    </div>
   );
 }
