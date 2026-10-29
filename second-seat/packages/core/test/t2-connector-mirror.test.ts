@@ -115,6 +115,55 @@ describe("t2 connector mirror", () => {
     expect(() => c.issueJob(A, meetingId, generationId)).toThrow(MeetingDenied);
   });
 
+  it("MIRROR-7 approving with a wrong package hash is rejected and nothing is sent or exportable", async () => {
+    const body = "fake draft package body for MIRROR-7";
+    const c = createMeetingConnector();
+    const { meetingId } = c.createMeeting(A, "fake meeting notes");
+    const { generationId } = c.openSession(A, meetingId);
+    const issued = c.issueJob(A, meetingId, generationId);
+    const callback: StoredCallback = {
+      jobId: issued.jobId,
+      ownerId: A.ownerId,
+      meetingId,
+      generationId,
+      authorityGeneration: issued.authorityGeneration,
+      sourceRevision: issued.sourceRevision,
+      artifact: body,
+    };
+    expect(c.resolveCallback(A, callback).delivered).toBe(true);
+    const correct = packageHash(body);
+    const wrong =
+      packageHash("fake unrelated package body") === correct
+        ? `${correct.slice(0, -1)}${correct.endsWith("0") ? "1" : "0"}`
+        : packageHash("fake unrelated package body");
+    expect(wrong).not.toBe(correct);
+    expect(c.approvePackage(A, issued.jobId, wrong).approved).toBe(false);
+    let calls = 0;
+    const ran = await c.replay(A, callback, async () => {
+      calls += 1;
+    });
+    expect(ran.ran).toBe(false);
+    expect(calls).toBe(0);
+    expect(() => c.exportApproved(A, issued.jobId)).toThrow(MeetingDenied);
+    expect(c.outboundCount()).toBe(0);
+  });
+
+  it("MIRROR-8 a second send after a successful send is rejected and the transport is called exactly once", async () => {
+    const { c, callback } = approvedJob("fake draft package body for MIRROR-8");
+    let calls = 0;
+    const first = await c.replay(A, callback, async () => {
+      calls += 1;
+    });
+    expect(first.ran).toBe(true);
+    expect(calls).toBe(1);
+    const second = await c.replay(A, callback, async () => {
+      calls += 1;
+    });
+    expect(second.ran).toBe(false);
+    expect(calls).toBe(1);
+    expect(c.outboundCount()).toBe(1);
+  });
+
   it("MIRROR-6 a first append to a revoked meeting does not bind the session", () => {
     const c = createMeetingConnector();
     const a = c.createMeeting(A, "revoked meeting");

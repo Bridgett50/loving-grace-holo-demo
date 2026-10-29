@@ -251,6 +251,48 @@ describe("t2 twin room", () => {
     expect(taken.exportFile()).toBeNull();
   });
 
+  it("T2-2 streaming two meetings keeps the selected meeting's twin context to that meeting's transcript lines only", () => {
+    const { room } = makeRoom();
+    const meetings = room.view().meetings;
+    expect(meetings.length).toBeGreaterThanOrEqual(2);
+    const [a, b] = [meetings[0].id, meetings[1].id];
+
+    room.selectMeeting(a);
+    const aLines: string[] = [];
+    for (let i = 0; i < 10; i++) {
+      const r = room.streamNextLine();
+      if (!r.appended) break;
+      const view = room.view();
+      aLines.push(view.transcript[view.transcript.length - 1]);
+    }
+    room.selectMeeting(b);
+    const bLines: string[] = [];
+    for (let i = 0; i < 10; i++) {
+      const r = room.streamNextLine();
+      if (!r.appended) break;
+      const view = room.view();
+      bLines.push(view.transcript[view.transcript.length - 1]);
+    }
+    expect(aLines.length).toBeGreaterThan(0);
+    expect(bLines.length).toBeGreaterThan(0);
+    // The two seeded meetings stream distinctive scripted lines.
+    for (const line of aLines) expect(bLines).not.toContain(line);
+
+    room.selectMeeting(a);
+    const ctxA = room.reasoningContext();
+    expect(ctxA.meeting.id).toBe(a);
+    expect(ctxA.transcript).toEqual(room.view().transcript);
+    for (const line of aLines) expect(ctxA.transcript).toContain(line);
+    for (const line of bLines) expect(ctxA.transcript).not.toContain(line);
+
+    room.selectMeeting(b);
+    const ctxB = room.reasoningContext();
+    expect(ctxB.meeting.id).toBe(b);
+    expect(ctxB.transcript).toEqual(room.view().transcript);
+    for (const line of bLines) expect(ctxB.transcript).toContain(line);
+    for (const line of aLines) expect(ctxB.transcript).not.toContain(line);
+  });
+
   it("T2-4 F2 note is shown: Takeover can't recall an email that's already sending.", () => {
     const { room } = makeRoom();
     expect(room.view().notes).toContain(NOTE_F2);
