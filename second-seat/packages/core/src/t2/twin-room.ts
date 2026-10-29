@@ -49,7 +49,9 @@ export const SEND_DISABLED_REASON = "Sending is disabled outside test mode";
 export const MAILTO_LABEL = "Open in your mail app";
 
 export type TwinStatus = "active" | "paused (you took over)";
-export type SendState = "unsent" | "sent" | "failed" | "unconfirmed";
+export type SendState = "unsent" | "sent" | "failed" | "unconfirmed" | "cancelled";
+export const CANCELLED_SEND_REASON =
+  "Send cancelled by takeover before the transport finished; it will not be retried.";
 export const UNCONFIRMED_SEND_REASON =
   "Send unconfirmed — check your outbox before retrying; the previous attempt may already have sent.";
 
@@ -210,7 +212,7 @@ function draftTemplate(ownerName: string, twinIdentity: string, title: string): 
 }
 
 export function createTwinRoom(opts?: {
-  transport?: (body: string) => Promise<void>;
+  transport?: (body: string, signal?: AbortSignal) => Promise<void>;
   testMode?: boolean;
   now?: () => number;
   store?: RoomStore;
@@ -226,6 +228,10 @@ export function createTwinRoom(opts?: {
   // no-op and behaviour is exactly the pre-T10 behaviour.
   const store = opts?.store ?? null;
   const intents = new Map<string, SendIntent>();
+  // In-flight sends keyed by slot key, so `takeOver()` can abort the
+  // transport of the owner's current attempt. Entries are removed when the
+  // send settles; a one-arg transport simply ignores the signal.
+  const inflight = new Map<string, { ownerId: string; controller: AbortController }>();
   let restoredFromPersistence = false;
 
   const owners = new Map<string, OwnerState>();
@@ -368,10 +374,18 @@ export function createTwinRoom(opts?: {
             ms.draft.sendState = saved.sendState;
           }
         } else {
-          // No valid approval to resume: restored body stays unapproved and
-          // unsendable, and any persisted intent is dropped.
+          // No valid approval to resume (for example the owner took over
+          // before the reload): the restored body stays unapproved and
+          // unsendable, but a durable send intent is still restored as
+          // history so "sent"/"failed"/"cancelled" survive the reload and a
+          // pending intent stays "unconfirmed" instead of becoming resendable.
           ms.draft.approved = false;
           ms.draft.sendState = "unsent";
+          if (saved.intent !== null) {
+            intents.set(slotKey(st.ownerId, ms.title), saved.intent);
+            ms.draft.sendState =
+              saved.intent.status === "pending" ? "unconfirmed" : saved.intent.status;
+          }
         }
         persistSlot(st, ms);
       }
@@ -399,6 +413,8 @@ export function createTwinRoom(opts?: {
 
   function approvedBodyText(st: OwnerState, ms: MeetingState): string | null {
     const d = ms.draft;
+    // A sent package is locked: nothing exits through the package routes.
+    if (d.sendState === "sent") return null;
     if (!d.approved) return null;
     if (d.jobId === null) return null;
     if (d.body !== d.approvedBody) return null;
@@ -408,6 +424,8 @@ export function createTwinRoom(opts?: {
 
   function exportReady(st: OwnerState, ms: MeetingState): boolean {
     const d = ms.draft;
+    // A sent package is locked: nothing exits through the package routes.
+    if (d.sendState === "sent") return false;
     if (!d.approved) return false;
     if (d.jobId === null) return false;
     if (d.body !== d.approvedBody) return false;
@@ -504,6 +522,19 @@ export function createTwinRoom(opts?: {
 
     takeOver(): void {
       const st = active();
+      // Abort this owner's in-flight sends first: a transport that rejects
+      // because of the abort lands in "cancelled". A transport that already
+      // completed (or ignores the abort and completes anyway) stays "sent":
+      // a recall that did not happen is never claimed.
+      for (const entry of inflight.values()) {
+        if (entry.ownerId !== st.ownerId) continue;
+        if (entry.controller.signal.aborted) continue;
+        try {
+          entry.controller.abort();
+        } catch {
+          // Aborting is best-effort; the send settles on its own path.
+        }
+      }
       st.takenOver = true;
       for (const m of st.meetings) connector.takeover(st.principal, m.generationId);
       // Evidence only: log a takeover event for each of the owner's meetings.
@@ -520,6 +551,28 @@ export function createTwinRoom(opts?: {
     approve(): { approved: boolean } {
       const st = active();
       const ms = selected(st);
+      const key = slotKey(st.ownerId, ms.title);
+      const intent = intents.get(key) ?? null;
+      // The same package must not be re-armed while a send intent is
+      // outstanding or terminal: re-approving an unconfirmed (pending)
+      // package could send it twice, and re-approving a sent or cancelled
+      // package would revive a closed send. A failed intent stays terminal
+      // for sends, and re-approval after a failure behaves as before.
+      if (
+        intent !== null &&
+        (intent.status === "pending" ||
+          intent.status === "sent" ||
+          intent.status === "cancelled")
+      ) {
+        return { approved: false };
+      }
+      if (
+        ms.draft.sendState === "sent" ||
+        ms.draft.sendState === "cancelled" ||
+        ms.draft.sendState === "unconfirmed"
+      ) {
+        return { approved: false };
+      }
       const body = ms.draft.body;
       if (!rebindApproved(st, ms, body)) return { approved: false };
       ms.draft.sendState = "unsent";
@@ -541,6 +594,10 @@ export function createTwinRoom(opts?: {
     editDraft(text: string): void {
       const st = active();
       const ms = selected(st);
+      // A sent package is locked: it can no longer be edited.
+      if (ms.draft.sendState === "sent") {
+        throw new Error("Package is locked after send; it can no longer be edited.");
+      }
       // Redact before storing: the shown/hashed package is always redacted.
       const redacted = redactPackageText(text);
       ms.draft.body = redacted.redactedText;
@@ -579,11 +636,16 @@ export function createTwinRoom(opts?: {
       // reloads as "unconfirmed" instead of silently resending.
       intents.set(key, { meetingId: ms.meetingId, packageHash: hash, status: "pending" });
       persistSlot(st, ms);
+      // Cancellable transport: `takeOver()` aborts this controller, and the
+      // signal is handed to the transport (existing one-arg transports keep
+      // working by ignoring it).
+      const controller = new AbortController();
+      inflight.set(key, { ownerId: st.ownerId, controller });
       const callback = d.callback;
       try {
         const ran = await connector.replay(st.principal, callback, async (pkg) => {
           capturedBodies.push(pkg.body);
-          if (userTransport) await userTransport(pkg.body);
+          if (userTransport) await userTransport(pkg.body, controller.signal);
         });
         if (!ran.ran) {
           // The connector refused before the transport ran, so nothing was
@@ -593,12 +655,25 @@ export function createTwinRoom(opts?: {
           return { ok: false, reason: "Connector refused to send" };
         }
       } catch {
+        if (controller.signal.aborted) {
+          // The transport rejects because takeover aborted it: the send is
+          // cancelled (NOT failed, NOT sent), the durable intent is marked
+          // cancelled, and it is never retried automatically.
+          d.sendState = "cancelled";
+          intents.set(key, { meetingId: ms.meetingId, packageHash: hash, status: "cancelled" });
+          // Evidence only: mirror the cancellation in the record (sentAt stays null).
+          evidence.markSent(ms.meetingId, "cancelled");
+          persistSlot(st, ms);
+          return { ok: false, reason: CANCELLED_SEND_REASON };
+        }
         d.sendState = "failed";
         intents.set(key, { meetingId: ms.meetingId, packageHash: hash, status: "failed" });
         // Evidence only: mirror the failure in the record (sentAt stays null).
         evidence.markSent(ms.meetingId, "failed");
         persistSlot(st, ms);
         return { ok: false, reason: "Transport failed" };
+      } finally {
+        if (inflight.get(key)?.controller === controller) inflight.delete(key);
       }
       d.sendState = "sent";
       intents.set(key, { meetingId: ms.meetingId, packageHash: hash, status: "sent" });

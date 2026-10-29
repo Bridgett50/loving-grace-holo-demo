@@ -9,8 +9,9 @@
  * hash), the send state, the evidence record, and a DURABLE SEND INTENT.
  *
  * `send()` writes `{ meetingId, packageHash, status: "pending" }` to the
- * store BEFORE calling the transport, then marks it `sent` or `failed`
- * after. A `pending` intent found at load time means the previous room died
+ * store BEFORE calling the transport, then marks it `sent`, `failed`, or
+ * `cancelled` (takeover aborted the in-flight transport) after. A `pending`
+ * intent found at load time means the previous room died
  * between the intent write and the transport result: the reloaded room must
  * NEVER auto-resend and must refuse a manual send ("unconfirmed").
  *
@@ -86,7 +87,7 @@ export function createLocalStorageRoomStore(
   };
 }
 
-export type SendIntentStatus = "pending" | "sent" | "failed";
+export type SendIntentStatus = "pending" | "sent" | "failed" | "cancelled";
 
 /** Durable send intent: written BEFORE the transport is called. */
 export interface SendIntent {
@@ -95,7 +96,7 @@ export interface SendIntent {
   readonly status: SendIntentStatus;
 }
 
-export type PersistedSendState = "unsent" | "sent" | "failed";
+export type PersistedSendState = "unsent" | "sent" | "failed" | "cancelled";
 
 /** Everything the room persists per owner + meeting. */
 export interface PersistedDraft {
@@ -138,11 +139,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isSendState(value: unknown): value is PersistedSendState {
-  return value === "unsent" || value === "sent" || value === "failed";
+  return (
+    value === "unsent" ||
+    value === "sent" ||
+    value === "failed" ||
+    value === "cancelled"
+  );
 }
 
 function isIntentStatus(value: unknown): value is SendIntentStatus {
-  return value === "pending" || value === "sent" || value === "failed";
+  return (
+    value === "pending" ||
+    value === "sent" ||
+    value === "failed" ||
+    value === "cancelled"
+  );
 }
 
 function readIntent(value: unknown): SendIntent | null {
@@ -174,7 +185,8 @@ function readEvidence(value: unknown): EvidenceRecord | null {
     (value["sentAt"] !== null && typeof value["sentAt"] !== "number") ||
     (value["sendState"] !== "unsent" &&
       value["sendState"] !== "sent" &&
-      value["sendState"] !== "failed") ||
+      value["sendState"] !== "failed" &&
+      value["sendState"] !== "cancelled") ||
     !Array.isArray(value["redactions"]) ||
     !Array.isArray(value["takeoverEvents"])
   ) {
@@ -232,6 +244,9 @@ export function loadPersistedDraft(
     if (intent.status === "pending" && parsed["sendState"] !== "unsent") return null;
     if (intent.status === "sent" && parsed["sendState"] !== "sent") return null;
     if (intent.status === "failed" && parsed["sendState"] !== "failed") return null;
+    if (intent.status === "cancelled" && parsed["sendState"] !== "cancelled") {
+      return null;
+    }
   }
 
   if (parsed["approved"] === true) {

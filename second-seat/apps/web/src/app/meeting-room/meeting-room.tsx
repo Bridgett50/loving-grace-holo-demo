@@ -226,6 +226,14 @@ export default function MeetingRoom() {
           <p className="text-sm text-muted-foreground">
             Approved: {v.draft.approved ? "yes" : "no"} · Send: {v.draft.sendState}
           </p>
+          {v.draft.sendState === "sent" && (
+            <p className="text-sm font-medium">Sent — package locked. Export, edit, and re-approve are disabled; the evidence record below stays available.</p>
+          )}
+          {v.draft.sendState === "cancelled" && (
+            <p className="text-sm font-medium text-destructive">
+              Send cancelled by takeover before the transport finished. It will not be retried.
+            </p>
+          )}
           <Textarea
             key={`${v.ownerId}-${v.selectedMeetingId}`}
             defaultValue={draftText}
@@ -240,6 +248,7 @@ export default function MeetingRoom() {
                 refresh();
               }}
               variant="outline"
+              disabled={v.draft.sendState === "sent"}
             >
               Save edit
             </Button>
@@ -248,6 +257,11 @@ export default function MeetingRoom() {
                 room.approve();
                 refresh();
               }}
+              disabled={
+                v.draft.sendState === "sent" ||
+                v.draft.sendState === "cancelled" ||
+                v.draft.sendState === "unconfirmed"
+              }
             >
               Approve
             </Button>

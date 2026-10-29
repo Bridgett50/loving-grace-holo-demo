@@ -11,7 +11,7 @@
 
 import type { CategoryRedactions } from "./redaction";
 
-export type EvidenceSendState = "unsent" | "sent" | "failed";
+export type EvidenceSendState = "unsent" | "sent" | "failed" | "cancelled";
 
 export type TakeoverEventKind = "takeover";
 
@@ -138,7 +138,8 @@ export function createInMemoryEvidenceStore(opts?: {
         (record.sentAt !== null && typeof record.sentAt !== "number") ||
         (record.sendState !== "unsent" &&
           record.sendState !== "sent" &&
-          record.sendState !== "failed") ||
+          record.sendState !== "failed" &&
+          record.sendState !== "cancelled") ||
         !Array.isArray(record.redactions) ||
         !Array.isArray(record.takeoverEvents)
       ) {

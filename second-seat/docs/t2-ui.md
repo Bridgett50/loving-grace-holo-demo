@@ -33,8 +33,22 @@ approves an exact follow-up package. All data is invented; nothing is real.
 
 ## Always-visible notes
 
-- F2: "Takeover can't recall an email that's already sending."
-- F3: "A sent package stays exportable until the meeting changes."
+- F2: "Takeover can't recall an email that's already sending." Takeover now
+  aborts an in-flight send (the room hands the transport an `AbortSignal`):
+  when the transport rejects because of the abort, the send becomes
+  `cancelled` — never `failed`, never `sent`, never retried, durable across
+  reloads, and not re-approvable. Limit: a send that already completed (or a
+  transport that ignores the abort and completes anyway) is truthfully
+  reported `sent`; a recall that did not happen is never claimed.
+- F3: "A sent package stays exportable until the meeting changes." A sent
+  package is now LOCKED immediately: Copy / mailto / Download return nothing,
+  Save edit is refused, and Approve is refused for that meeting (no
+  re-approval of an already-sent package). The evidence-record JSON export
+  stays available — it is the audit record, not the package.
+- Related fix: `approve()` is refused while a durable send intent is
+  `pending` (shown as `unconfirmed` after reload), `sent`, or `cancelled`,
+  so an unconfirmed package can no longer be re-approved and sent twice.
+  `failed` stays terminal for sends, as before.
 
 ## What is faked
 
@@ -107,6 +121,19 @@ approves an exact follow-up package. All data is invented; nothing is real.
   browser's local storage" note plus the unconfirmed alert when applicable.
   Pre-approval takeover events (pending, no record yet) are not durable
   across reloads.
+
+## What is shown (continued)
+
+- **T11 takeover-cancel + sent lock.** `send()` creates an `AbortController`
+  per attempt and passes its signal to the transport (one-arg transports keep
+  working by ignoring it). `takeOver()` aborts the owner's in-flight sends.
+  An aborted transport lands the send in the new `cancelled` state with the
+  durable intent marked `cancelled` and the evidence record saying so; a
+  reload keeps `cancelled`, and the send is never retried or re-approved.
+  Immediately after a successful send the package locks (`Sent — package
+  locked` in the UI; export/edit/approve controls disabled). A slot whose
+  body and approved body were rewritten consistently but whose stored hashes
+  are stale still loads as not approved.
 
 ## Not built / follow-ups
 
