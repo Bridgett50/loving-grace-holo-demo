@@ -3,9 +3,7 @@
 
 **Live:** https://bridgett50.github.io/loving-grace-holo-demo/
 
-## Also in this repo — Second Seat (AI meeting twin)
-
-**[Second Seat](second-seat/)** is Loving Grace Technologies' AI meeting twin for Google Meet, Zoom, and Microsoft Teams — live in demo mode at [app.lovinggracetechnologies.com](https://app.lovinggracetechnologies.com). **Reviewers (Meta Global AI Developer Hackathon): start with [second-seat/REVIEWERS.md](second-seat/REVIEWERS.md)** — the 3-minute path: live demo, the deterministic safeguard core, the architecture, and an honest status table.
+> Looking for Second Seat (Meta Global AI Developer Hackathon)? The hackathon build lives at [github.com/Bridgett50/second-seat-hackathon](https://github.com/Bridgett50/second-seat-hackathon). Try the live offline demo: [https://second-seat-offline-demo.onrender.com/meeting-room?demo=1](https://second-seat-offline-demo.onrender.com/meeting-room?demo=1)
 
 ---
 

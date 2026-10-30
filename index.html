@@ -8,6 +8,7 @@
 <script>if(/[?&]mode=3d\b/.test(location.search))location.replace('lab/');</script>
 <link rel="stylesheet" href="holo.css">
 </head><body>
+<div id="ss-banner" role="note">Looking for Second Seat (Meta Global AI Developer Hackathon)? The hackathon build lives at <a href="https://github.com/Bridgett50/second-seat-hackathon" target="_blank" rel="noopener noreferrer">github.com/Bridgett50/second-seat-hackathon</a>. Try the live offline demo: <a href="https://second-seat-offline-demo.onrender.com/meeting-room?demo=1" target="_blank" rel="noopener noreferrer">https://second-seat-offline-demo.onrender.com/meeting-room?demo=1</a><button id="ss-banner-close" aria-label="Dismiss">×</button></div>
 <canvas id="view"></canvas>
 <video id="vid" playsinline muted autoplay></video>
 <div id="brand">Loving Grace <span>Technologies</span></div>
@@ -24,4 +25,5 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js" defer></script>
 <script type="module" src="holo.js"></script>
+<script>(function(){var b=document.getElementById('ss-banner');var c=document.getElementById('ss-banner-close');var t=document.getElementById('tap');if(!b)return;function hide(){b.hidden=true;try{localStorage.setItem('ss-banner-dismissed','1')}catch(e){}}try{if(localStorage.getItem('ss-banner-dismissed'))b.hidden=true}catch(e){}if(c)c.addEventListener('click',function(e){e.stopPropagation();hide()});b.addEventListener('click',function(e){e.stopPropagation()});b.addEventListener('pointerdown',function(e){e.stopPropagation()});if(t)t.addEventListener('click',function(){b.hidden=true})})();</script>
 </body></html>
